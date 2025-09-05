@@ -33,16 +33,17 @@ import {
   Text,
   TextContent
 } from '@patternfly/react-core';
-import { SortAmountDownIcon } from '@patternfly/react-icons/dist/esm/icons/sort-amount-down-icon';
+import { SortAmountDownIcon } from '@patternfly/react-icons/dist/esm/icons/sort-amount-down-icon.js';
 import { Thead, Tr, Th, Tbody, Td, IAction, ActionsColumn, Table, InnerScrollContainer } from '@patternfly/react-table';
 import { artemisPreferencesService } from '../artemis-preferences-service';
 import {
-  OptionsMenu,
-  OptionsMenuItem,
-  OptionsMenuItemGroup,
-  OptionsMenuSeparator,
-  OptionsMenuToggle
-} from '@patternfly/react-core/deprecated'
+  Menu,
+  MenuItem,
+  MenuGroup,
+  Divider,
+  MenuToggle,
+  MenuList
+} from '@patternfly/react-core'
 
 import { ArtemisFilters } from './ArtemisFilters';
 import {Simulate} from "react-dom/test-utils";
@@ -114,6 +115,14 @@ const operationOptions = [
   const [rows, setRows] = useState([])
   const [resultsSize, setresultsSize] = useState(0)
   const [columnsLoaded, setColumnsLoaded] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  
+
+
+  const handleToggle = () => {
+    setIsOpen((prev) => !prev);
+  };
+
 
   const [columns, setColumns] = useState(broker.allColumns);
   const [activeSort, setActiveSort] = useState(initialActiveSort);
@@ -334,18 +343,22 @@ const operationOptions = [
     );
   };
 
+
+
   return (
     <React.Fragment>
 
       <Toolbar id="toolbar">
         <ToolbarContent>
           <ToolbarItem key='address-sort'>
-            <OptionsMenu
-              id="options-menu-multiple-options-example"
-              menuItems={[
-                <OptionsMenuItemGroup key="sort-columns" aria-label="Sort column">
+    <Menu
+      aria-label="Options menu"
+    >
+               <MenuToggle onClick={() => setIsOpen(!isOpen)}>Options</MenuToggle>
+              <MenuList>
+                <MenuGroup key="sort-columns" aria-label="Sort column">
                   {Object.values(broker.allColumns).filter((element) => element.visible).map((column, columnIndex) => (
-                    <OptionsMenuItem
+                    <MenuItem
                       key={column.id}
                       isSelected={activeSort.id === column.id}
                       onSelect={() => {
@@ -353,40 +366,31 @@ const operationOptions = [
                       }}
                     >
                       {column.name}
-                    </OptionsMenuItem>
+                    </MenuItem>
                   ))}
-                </OptionsMenuItemGroup>,
-                <OptionsMenuSeparator key="separator" />,
-                <OptionsMenuItemGroup key="sort-direction" aria-label="Sort direction">
-                  <OptionsMenuItem
+                </MenuGroup>,
+                <Divider key="separator" />,
+                <MenuGroup key="sort-direction" aria-label="Sort direction">
+                  <MenuItem
                     onSelect={() => updateActiveSort(activeSort.id, SortDirection.ASCENDING)}
                     isSelected={activeSort.order === SortDirection.ASCENDING}
                     id="ascending"
                     key="ascending"
                   >
                     Ascending
-                  </OptionsMenuItem>
-                  <OptionsMenuItem
+                  </MenuItem>
+                  <MenuItem
                     onSelect={() => updateActiveSort(activeSort.id, SortDirection.DESCENDING)}
                     isSelected={activeSort.order === SortDirection.DESCENDING}
                     id="descending"
                     key="descending"
                   >
                     Descending
-                  </OptionsMenuItem>
-                </OptionsMenuItemGroup>
-              ]}
-              isOpen={isSortDropdownOpen}
-              toggle={
-                <OptionsMenuToggle
-                  hideCaret
-                  onToggle={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
-                  toggleTemplate={<SortAmountDownIcon />}
-                />
-              }
-              isPlain
-              isGrouped
-            />
+                  </MenuItem>
+                </MenuGroup>
+              </MenuList>
+               </Menu>
+
           </ToolbarItem>
 
           <ArtemisFilters

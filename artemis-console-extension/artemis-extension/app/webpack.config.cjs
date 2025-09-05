@@ -231,6 +231,7 @@ module.exports = (webpackEnv, args) => {
       /Critical dependency: the request of a dependency is an expression/
     ],
     resolve: {
+      fullySpecified: false, // allows imports without extensions
       extensions: ['.ts', '.tsx', '.js', '.cjs', '.jsx'],
       alias: {
         'artemis-console-plugin': path.resolve(__dirname, '../packages/artemis-console-plugin/src'),

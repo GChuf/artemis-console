@@ -31,7 +31,7 @@ const root = ReactDOM.createRoot(document.getElementById('root') as HTMLElement)
 root.render(<HawtioInitialization verbose={configManager.globalLogLevel() < Logger.INFO.value} />)
 
 // See package.json "replace-version" script for how to replace the version placeholder with a real version
-configManager.addProductInfo('Artemis Console', '__PACKAGE_VERSION_PLACEHOLDER__');
+//configManager.addProductInfo('Artemis Console', '__PACKAGE_VERSION_PLACEHOLDER__');
 
 // Initialization phase is finished. We could already bootstrap Hawtio, but this is the stage, where we register
 // built-in Hawtio plugins and our examples (custom plugins).
