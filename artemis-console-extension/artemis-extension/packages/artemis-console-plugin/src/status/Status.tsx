@@ -41,8 +41,8 @@ import {
     Spinner,
     Tooltip
 } from "@patternfly/react-core"
-import { EllipsisVIcon } from '@patternfly/react-icons/dist/esm/icons/ellipsis-v-icon'
-import { ExclamationCircleIcon } from '@patternfly/react-icons/dist/esm/icons/exclamation-circle-icon'
+import { EllipsisVIcon } from '@patternfly/react-icons/dist/esm/icons/ellipsis-v-icon.js'
+import { ExclamationCircleIcon } from '@patternfly/react-icons/dist/esm/icons/exclamation-circle-icon.js'
 import { OkIcon } from '@patternfly/react-icons/dist/esm/icons/ok-icon'
 import { Attributes, eventService, jolokiaService, Operations } from '@hawtio/react';
 import React, { ReactNode, useContext, useEffect, useState } from "react";
