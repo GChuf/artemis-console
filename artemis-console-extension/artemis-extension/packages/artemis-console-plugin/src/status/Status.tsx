@@ -132,6 +132,10 @@ export const Status: React.FunctionComponent = () => {
         setShowOperationsDialog(true);
     }
 
+    const diskSpaceUsed = brokerInfo?.diskStoreUsagePercentage ?? 0;
+    const diskSpaceMax = brokerInfo?.maxDiskUsage ?? 0;
+    const diskSpaceRemaining = diskSpaceMax - diskSpaceUsed;
+
     const statusActions = (
         <Dropdown
             onSelect={onBrokerInfoSelect}
@@ -236,7 +240,7 @@ export const Status: React.FunctionComponent = () => {
                         <CardBody>
                             <Divider />
                             <ChartDonutThreshold
-                                ariaDesc="Disk Used1"
+                                ariaDesc="Disk Used"
                                 //ariaTitle="Disk Used2"
                                 constrainToVisibleArea
                                 padding={{
@@ -252,14 +256,14 @@ export const Status: React.FunctionComponent = () => {
                                 
                                 data={
                                     [
-                                        { x: 'Usable at maxDiskUsage%', y: brokerInfo?.maxDiskUsage },
+                                        { x: 'Usable at maxDiskUsage%', y: diskSpaceMax },
                                         { x: 'Max at 100%', y: 100 }
                                     ]
                                 }
                                 labels={
                                     [
-                                        `Max disk usage: ${(brokerInfo?.maxDiskUsage ?? 0)}%`,
-                                        `Reserved disk space: ${100 - (brokerInfo?.maxDiskUsage ?? 0)}%`
+                                        `Max disk usage: ${diskSpaceMax}%`,
+                                        `Reserved disk space: ${100 - diskSpaceMax}%`
                                     ]
                                 }
 
@@ -269,19 +273,25 @@ export const Status: React.FunctionComponent = () => {
                             <ChartDonutUtilization
                                 data={
                                     { x: 'Used:', y: brokerInfo?.diskStoreUsagePercentage }
-                                }
+                                }/*
                                 labels={
                                     [
                                         //`Used: ${brokerInfo?.diskStoreUsagePercentage.toFixed(2)}%`
                                         `Usable disk space remaining: ${(
                                         (brokerInfo?.maxDiskUsage ?? 0) -
                                         (brokerInfo?.diskStoreUsagePercentage ?? 0)
-                                        ).toFixed(2)}% / ${brokerInfo?.maxDiskUsage ?? 0}%`,
+                                        ).toFixed(2)}/${brokerInfo?.maxDiskUsage ?? 0}%`,
                                     ]
                                 }
-                                thresholds={[{ value: brokerInfo?.maxDiskUsage }, { value: brokerInfo?.maxDiskUsage }]} // 60% warning, 90% danger
-                                subTitle="% Disk Used"
-                                title={"" + brokerInfo?.diskStoreUsagePercentage.toFixed(2)}
+*/
+                                labels={[
+                                diskSpaceRemaining < 0
+                                    ? "No space remaining, broker is blocking consumers!"
+                                    : `Usable disk space remaining: ${diskSpaceRemaining.toFixed(2)}/${diskSpaceMax}%`
+                                ]}
+                                thresholds={[{ value: (diskSpaceMax - 10) }, { value: diskSpaceMax }]} // 60% warning, 90% danger
+                                subTitle="Disk Used"
+                                title={brokerInfo?.diskStoreUsagePercentage.toFixed(2) + "%"}
                                 />
                             </ChartDonutThreshold>
                         </CardBody>
