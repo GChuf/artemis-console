@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { ChartDonutUtilization } from "@patternfly/react-charts"
+import { ChartDonutUtilization,ChartDonutThreshold } from "@patternfly/react-charts"
 import {
     Alert,
     Card,
@@ -235,10 +235,28 @@ export const Status: React.FunctionComponent = () => {
                         </CardHeader>
                         <CardBody>
                             <Divider />
-                            <ChartDonutUtilization
+                            <ChartDonutThreshold
                                 ariaDesc="Disk Used"
                                 ariaTitle="Disk Used"
                                 constrainToVisibleArea
+                                padding={{
+                                    bottom: 0,
+                                    left: 0,
+                                    right: 0,
+                                    top: 20
+                                }}
+                                
+                                data={
+                                    [
+                                        { x: 'Warning at 60%', y: 90 },
+                                        { x: 'Danger at 90%', y: 90 }
+                                    ]
+                                }
+                                name="chart101"
+                                width={350}
+                            >
+                            <ChartDonutUtilization
+
                                 data={
                                     { x: 'Used:', y: brokerInfo?.diskStoreUsagePercentage }
                                     //{ x: 'remaining:', y: 5 },
@@ -249,17 +267,14 @@ export const Status: React.FunctionComponent = () => {
                                         //`Remaining: 5%`,
                                     ]
                                 }
-                                thresholds={[{ value: 60 }, { value: 100 }]} // 60% warning, 90% danger
-                                name="chart3"
-                                padding={{
-                                    bottom: 20,
-                                    left: 20,
-                                    right: 20,
-                                    top: 20
-                                }}
-                                subTitle="Disk Percent Used"
+                                thresholds={[{ value: 90 }, { value: 90 }]} // 60% warning, 90% danger
+                                subTitle="% Disk Used"
+
+                                //subTitle="Disk Percent Used"
                                 title={"" + brokerInfo?.diskStoreUsagePercentage.toFixed(2)}
-                                width={350} />
+                                //width={350} 
+                                />
+                            </ChartDonutThreshold>
                         </CardBody>
                     </Card>
                 </GridItem>
