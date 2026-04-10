@@ -241,6 +241,7 @@ export const Status: React.FunctionComponent = () => {
                             <Divider />
                             <ChartDonutThreshold
                                 ariaDesc="Disk Used"
+                                ariaTitle="Disk Used"
                                 constrainToVisibleArea
                                 padding={{
                                     bottom: 20,
