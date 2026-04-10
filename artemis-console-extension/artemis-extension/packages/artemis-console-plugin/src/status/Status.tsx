@@ -228,6 +228,41 @@ export const Status: React.FunctionComponent = () => {
                         </CardBody>
                     </Card>
                 </GridItem>
+                <GridItem span={3} rowSpan={3}>
+                    <Card isFullHeight={true}>
+                        <CardHeader>
+                            <CardTitle>Disk Used</CardTitle>
+                        </CardHeader>
+                        <CardBody>
+                            <Divider />
+                            <ChartDonutUtilization
+                                ariaDesc="Disk Used"
+                                ariaTitle="Disk Used"
+                                constrainToVisibleArea
+                                data={
+                                    { x: 'Used:', y: brokerInfo?.diskStoreUsagePercentage }
+                                    //{ x: 'remaining:', y: 5 },
+                                }
+                                labels={
+                                    [
+                                        `Used: ${brokerInfo?.diskStoreUsagePercentage.toFixed(2)}%`
+                                        //`Remaining: 5%`,
+                                    ]
+                                }
+                                thresholds={[{ value: 60 }, { value: 100 }]} // 60% warning, 90% danger
+                                name="chart3"
+                                padding={{
+                                    bottom: 20,
+                                    left: 20,
+                                    right: 20,
+                                    top: 20
+                                }}
+                                subTitle="Disk Percent Used"
+                                title={"" + brokerInfo?.diskStoreUsagePercentage.toFixed(2)}
+                                width={350} />
+                        </CardBody>
+                    </Card>
+                </GridItem>
             </Grid>
             <ExpandableSection toggleTextExpanded="Acceptors" toggleTextCollapsed="Acceptors">
                 <Grid hasGutter span={4}>
