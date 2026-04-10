@@ -236,8 +236,8 @@ export const Status: React.FunctionComponent = () => {
                         <CardBody>
                             <Divider />
                             <ChartDonutThreshold
-                                ariaDesc="Disk Used"
-                                ariaTitle="Disk Used"
+                                ariaDesc="Disk Used1"
+                                //ariaTitle="Disk Used2"
                                 constrainToVisibleArea
                                 padding={{
                                     bottom: 0,
@@ -249,9 +249,19 @@ export const Status: React.FunctionComponent = () => {
                                 data={
                                     [
                                         { x: 'Warning at 60%', y: 90 },
-                                        { x: 'Danger at 90%', y: 90 }
+                                        { x: 'Danger at 90%', y: 100 }
                                     ]
                                 }
+                                labels={
+                                    [
+                                        `Usable disk space remaining: ${(
+                                        (brokerInfo?.maxDiskUsage ?? 0) -
+                                        (brokerInfo?.diskStoreUsagePercentage ?? 0)
+                                        ).toFixed(2)}% / ${brokerInfo?.maxDiskUsage ?? 0}%`,
+                                        `Reserved disk space: ${100 - (brokerInfo?.maxDiskUsage ?? 0)}%`
+                                    ]
+                                }
+
                                 name="chart101"
                                 width={350}
                             >
