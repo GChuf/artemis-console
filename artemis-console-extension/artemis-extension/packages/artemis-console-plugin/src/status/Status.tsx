@@ -240,24 +240,25 @@ export const Status: React.FunctionComponent = () => {
                                 //ariaTitle="Disk Used2"
                                 constrainToVisibleArea
                                 padding={{
-                                    bottom: 0,
-                                    left: 0,
-                                    right: 0,
+                                   //bottom: 0,
+                                    //left: 0,
+                                    //right: 0,
+                                    //top: 20
+                                    bottom: 20,
+                                    left: 20,
+                                    right: 20,
                                     top: 20
                                 }}
                                 
                                 data={
                                     [
-                                        { x: 'Warning at 60%', y: 90 },
-                                        { x: 'Danger at 90%', y: 100 }
+                                        { x: 'Usable at maxDiskUsage%', y: brokerInfo?.maxDiskUsage },
+                                        { x: 'Max at 100%', y: 100 }
                                     ]
                                 }
                                 labels={
                                     [
-                                        `Usable disk space remaining: ${(
-                                        (brokerInfo?.maxDiskUsage ?? 0) -
-                                        (brokerInfo?.diskStoreUsagePercentage ?? 0)
-                                        ).toFixed(2)}% / ${brokerInfo?.maxDiskUsage ?? 0}%`,
+                                        `Max disk usage: ${(brokerInfo?.maxDiskUsage ?? 0)}%`,
                                         `Reserved disk space: ${100 - (brokerInfo?.maxDiskUsage ?? 0)}%`
                                     ]
                                 }
@@ -266,23 +267,21 @@ export const Status: React.FunctionComponent = () => {
                                 width={350}
                             >
                             <ChartDonutUtilization
-
                                 data={
                                     { x: 'Used:', y: brokerInfo?.diskStoreUsagePercentage }
-                                    //{ x: 'remaining:', y: 5 },
                                 }
                                 labels={
                                     [
-                                        `Used: ${brokerInfo?.diskStoreUsagePercentage.toFixed(2)}%`
-                                        //`Remaining: 5%`,
+                                        //`Used: ${brokerInfo?.diskStoreUsagePercentage.toFixed(2)}%`
+                                        `Usable disk space remaining: ${(
+                                        (brokerInfo?.maxDiskUsage ?? 0) -
+                                        (brokerInfo?.diskStoreUsagePercentage ?? 0)
+                                        ).toFixed(2)}% / ${brokerInfo?.maxDiskUsage ?? 0}%`,
                                     ]
                                 }
-                                thresholds={[{ value: 90 }, { value: 90 }]} // 60% warning, 90% danger
+                                thresholds={[{ value: brokerInfo?.maxDiskUsage }, { value: brokerInfo?.maxDiskUsage }]} // 60% warning, 90% danger
                                 subTitle="% Disk Used"
-
-                                //subTitle="Disk Percent Used"
                                 title={"" + brokerInfo?.diskStoreUsagePercentage.toFixed(2)}
-                                //width={350} 
                                 />
                             </ChartDonutThreshold>
                         </CardBody>
