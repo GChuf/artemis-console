@@ -359,7 +359,7 @@ const operationOptions = [
                   </MenuToggle>
                 )}
               >
-                <MenuGroup key="sort-columns" aria-label="Sort column">
+                <MenuList>
                   {Object.values(broker.allColumns).filter((element) => element.visible).map(column => (
                     <MenuItem
                       key={column.id}
@@ -371,7 +371,7 @@ const operationOptions = [
                       {column.name}
                     </MenuItem>
                   ))}
-                <Divider key="separator" />
+                  <Divider key="separator" />
                   <MenuItem
                     onClick={() => {
                       updateActiveSort(activeSort.id, SortDirection.ASCENDING)
@@ -394,9 +394,8 @@ const operationOptions = [
                   >
                     Descending
                   </MenuItem>
-                </MenuGroup>
+                </MenuList>
                </Select>
-
           </ToolbarItem>
 
           <ArtemisFilters
