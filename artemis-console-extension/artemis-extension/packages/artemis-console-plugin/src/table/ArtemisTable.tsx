@@ -342,51 +342,51 @@ const operationOptions = [
       <Toolbar id="toolbar">
         <ToolbarContent>
           <ToolbarItem key='address-sort'>
-              <Select
-                aria-label="Options menu"
-                isOpen={operationOpen}
-                onOpenChange={setOperationOpen}
-                onSelect={() => setOperationOpen(false)}
-                toggle={(toggleRef) => (
-                  <MenuToggle ref={toggleRef} onClick={onToggle}>
-                    Options
-                  </MenuToggle>
-                )}
-              >
-                <MenuList>
-                  {visibleColumns.map(column => (
-                    <MenuItem
-                      key={column.id}
-                      isSelected={activeSort.id === column.id}
-                      onClick={() => {
-                        updateActiveSort(column.id, activeSort.order)
-                      }}>
-                      {column.name}
-                    </MenuItem>
-                  ))}
-                  <Divider key="separator" />
+            <Select
+              aria-label="Options menu"
+              isOpen={operationOpen}
+              onOpenChange={setOperationOpen}
+              onSelect={() => setOperationOpen(false)}
+              toggle={(toggleRef) => (
+                <MenuToggle ref={toggleRef} onClick={onToggle}>
+                  Options
+                </MenuToggle>
+              )}
+            >
+              <MenuList>
+                {visibleColumns.map(column => (
                   <MenuItem
+                    key={column.id}
+                    isSelected={activeSort.id === column.id}
                     onClick={() => {
-                      updateActiveSort(activeSort.id, SortDirection.ASCENDING)
-                    }}
-                    isSelected={activeSort.order === SortDirection.ASCENDING}
-                    id="ascending"
-                    key="ascending"
-                  >
-                    Ascending
+                      updateActiveSort(column.id, activeSort.order)
+                    }}>
+                    {column.name}
                   </MenuItem>
-                  <MenuItem
-                    onClick={() => {
-                      updateActiveSort(activeSort.id, SortDirection.DESCENDING)
-                    }}
-                    isSelected={activeSort.order === SortDirection.DESCENDING}
-                    id="descending"
-                    key="descending"
-                  >
-                    Descending
-                  </MenuItem>
-                </MenuList>
-               </Select>
+                ))}
+                <Divider key="separator" />
+                <MenuItem
+                  onClick={() => {
+                    updateActiveSort(activeSort.id, SortDirection.ASCENDING)
+                  }}
+                  isSelected={activeSort.order === SortDirection.ASCENDING}
+                  id="ascending"
+                  key="ascending"
+                >
+                  Ascending
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    updateActiveSort(activeSort.id, SortDirection.DESCENDING)
+                  }}
+                  isSelected={activeSort.order === SortDirection.DESCENDING}
+                  id="descending"
+                  key="descending"
+                >
+                  Descending
+                </MenuItem>
+              </MenuList>
+            </Select>
           </ToolbarItem>
 
           <ArtemisFilters
