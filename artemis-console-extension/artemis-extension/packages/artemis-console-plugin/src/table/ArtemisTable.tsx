@@ -348,11 +348,10 @@ const operationOptions = [
       <Toolbar id="toolbar">
         <ToolbarContent>
           <ToolbarItem key='address-sort'>
-
               <Select
               aria-label="Options menu"
-          isOpen={operationOpen}
-          onOpenChange={setOperationOpen}
+                isOpen={operationOpen}
+                onOpenChange={setOperationOpen}
                 onSelect={() => setOperationOpen(false)}
                 toggle={(toggleRef) => (
                   <MenuToggle ref={toggleRef} onClick={onToggle}>
@@ -360,7 +359,6 @@ const operationOptions = [
                   </MenuToggle>
                 )}
               >
-
                 <MenuGroup key="sort-columns" aria-label="Sort column">
                   {Object.values(broker.allColumns).filter((element) => element.visible).map(column => (
                     <MenuItem
@@ -373,11 +371,12 @@ const operationOptions = [
                       {column.name}
                     </MenuItem>
                   ))}
-
                 <Divider key="separator" />
-
                   <MenuItem
-                    onSelect={() => updateActiveSort(activeSort.id, SortDirection.ASCENDING)}
+                    onClick={() => {
+                      updateActiveSort(activeSort.id, SortDirection.ASCENDING)
+                      setOperationOpen(false)
+                    }}
                     isSelected={activeSort.order === SortDirection.ASCENDING}
                     id="ascending"
                     key="ascending"
@@ -385,7 +384,10 @@ const operationOptions = [
                     Ascending
                   </MenuItem>
                   <MenuItem
-                    onSelect={() => updateActiveSort(activeSort.id, SortDirection.DESCENDING)}
+                    onClick={() => {
+                      updateActiveSort(activeSort.id, SortDirection.DESCENDING)
+                      setOperationOpen(false)
+                    }}
                     isSelected={activeSort.order === SortDirection.DESCENDING}
                     id="descending"
                     key="descending"
