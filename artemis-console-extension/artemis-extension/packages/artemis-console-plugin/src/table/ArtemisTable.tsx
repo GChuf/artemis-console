@@ -116,17 +116,9 @@ const operationOptions = [
   const [resultsSize, setresultsSize] = useState(0)
   const [columnsLoaded, setColumnsLoaded] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  
-
-
-  const handleToggle = () => {
-    setIsOpen((prev) => !prev);
-  };
-
 
   const [columns, setColumns] = useState(broker.allColumns);
   const [activeSort, setActiveSort] = useState(initialActiveSort);
-  const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [page, setPage] = useState(1);
   const [isCompact, setIsCompact] = useState(false);
