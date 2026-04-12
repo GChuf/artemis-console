@@ -117,6 +117,10 @@ const operationOptions = [
   const [columnsLoaded, setColumnsLoaded] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
+  const handleToggle = () => {
+    setIsOpen((prev) => !prev);
+  };
+
   const [columns, setColumns] = useState(broker.allColumns);
   const [activeSort, setActiveSort] = useState(initialActiveSort);
   const [isModalOpen, setIsModalOpen] = useState(false);
