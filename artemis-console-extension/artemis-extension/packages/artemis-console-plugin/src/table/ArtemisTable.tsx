@@ -348,8 +348,12 @@ const operationOptions = [
               onOpenChange={setOperationOpen}
               onSelect={() => setOperationOpen(false)}
               toggle={(toggleRef) => (
-                <MenuToggle ref={toggleRef} onClick={onToggle}>
-                  Options
+                <MenuToggle
+                  ref={toggleRef}
+                  onClick={onToggle}
+                  variant="plain"
+                >
+                  <SortAmountDownIcon />
                 </MenuToggle>
               )}
             >
