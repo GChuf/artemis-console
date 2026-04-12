@@ -360,13 +360,12 @@ const operationOptions = [
                 )}
               >
                 <MenuList>
-                  {Object.values(broker.allColumns).filter((element) => element.visible).map(column => (
+                  {visibleColumns.map(column => (
                     <MenuItem
                       key={column.id}
                       isSelected={activeSort.id === column.id}
                       onClick={() => {
                         updateActiveSort(column.id, activeSort.order)
-                        setOperationOpen(false)
                       }}>
                       {column.name}
                     </MenuItem>
@@ -375,7 +374,6 @@ const operationOptions = [
                   <MenuItem
                     onClick={() => {
                       updateActiveSort(activeSort.id, SortDirection.ASCENDING)
-                      setOperationOpen(false)
                     }}
                     isSelected={activeSort.order === SortDirection.ASCENDING}
                     id="ascending"
@@ -386,7 +384,6 @@ const operationOptions = [
                   <MenuItem
                     onClick={() => {
                       updateActiveSort(activeSort.id, SortDirection.DESCENDING)
-                      setOperationOpen(false)
                     }}
                     isSelected={activeSort.order === SortDirection.DESCENDING}
                     id="descending"
