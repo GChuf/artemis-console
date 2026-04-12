@@ -42,7 +42,8 @@ import {
   MenuGroup,
   Divider,
   MenuToggle,
-  MenuList
+  MenuList,
+  Select
 } from '@patternfly/react-core'
 
 import { ArtemisFilters } from './ArtemisFilters';
@@ -115,11 +116,11 @@ const operationOptions = [
   const [rows, setRows] = useState([])
   const [resultsSize, setresultsSize] = useState(0)
   const [columnsLoaded, setColumnsLoaded] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
+  const [operationOpen, setOperationOpen] = useState(false);
 
-  const handleToggle = () => {
-    setIsOpen((prev) => !prev);
-  };
+  const onToggle = () => setOperationOpen(prev => !prev);
+
+
 
   const [columns, setColumns] = useState(broker.allColumns);
   const [activeSort, setActiveSort] = useState(initialActiveSort);
@@ -347,26 +348,34 @@ const operationOptions = [
       <Toolbar id="toolbar">
         <ToolbarContent>
           <ToolbarItem key='address-sort'>
-    <Menu
-      aria-label="Options menu"
-    >
-               <MenuToggle onClick={() => setIsOpen(!isOpen)}>Options</MenuToggle>
-              <MenuList>
+
+              <Select
+              aria-label="Options menu"
+          isOpen={operationOpen}
+          onOpenChange={setOperationOpen}
+                onSelect={() => setOperationOpen(false)}
+                toggle={(toggleRef) => (
+                  <MenuToggle ref={toggleRef} onClick={onToggle}>
+                    Options
+                  </MenuToggle>
+                )}
+              >
+
                 <MenuGroup key="sort-columns" aria-label="Sort column">
-                  {Object.values(broker.allColumns).filter((element) => element.visible).map((column, columnIndex) => (
+                  {Object.values(broker.allColumns).filter((element) => element.visible).map(column => (
                     <MenuItem
                       key={column.id}
                       isSelected={activeSort.id === column.id}
-                      onSelect={() => {
+                      onClick={() => {
                         updateActiveSort(column.id, activeSort.order)
-                      }}
-                    >
+                        setOperationOpen(false)
+                      }}>
                       {column.name}
                     </MenuItem>
                   ))}
-                </MenuGroup>,
-                <Divider key="separator" />,
-                <MenuGroup key="sort-direction" aria-label="Sort direction">
+
+                <Divider key="separator" />
+
                   <MenuItem
                     onSelect={() => updateActiveSort(activeSort.id, SortDirection.ASCENDING)}
                     isSelected={activeSort.order === SortDirection.ASCENDING}
@@ -384,8 +393,7 @@ const operationOptions = [
                     Descending
                   </MenuItem>
                 </MenuGroup>
-              </MenuList>
-               </Menu>
+               </Select>
 
           </ToolbarItem>
 
