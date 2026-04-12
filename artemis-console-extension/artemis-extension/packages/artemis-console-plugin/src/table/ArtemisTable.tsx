@@ -394,7 +394,7 @@ const operationOptions = [
           </ToolbarItem>
 
           <ArtemisFilters
-            columns={columns}
+            columns={visibleColumns}
             operationOptions={operationOptions}
             initialFilter={filter}
             onApplyFilter={(f) => {
