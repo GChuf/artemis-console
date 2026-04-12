@@ -37,9 +37,7 @@ import { SortAmountDownIcon } from '@patternfly/react-icons/dist/esm/icons/sort-
 import { Thead, Tr, Th, Tbody, Td, IAction, ActionsColumn, Table, InnerScrollContainer } from '@patternfly/react-table';
 import { artemisPreferencesService } from '../artemis-preferences-service';
 import {
-  Menu,
   MenuItem,
-  MenuGroup,
   Divider,
   MenuToggle,
   MenuList,
@@ -117,11 +115,7 @@ const operationOptions = [
   const [resultsSize, setresultsSize] = useState(0)
   const [columnsLoaded, setColumnsLoaded] = useState(false);
   const [operationOpen, setOperationOpen] = useState(false);
-
   const onToggle = () => setOperationOpen(prev => !prev);
-
-
-
   const [columns, setColumns] = useState(broker.allColumns);
   const [activeSort, setActiveSort] = useState(initialActiveSort);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -349,7 +343,7 @@ const operationOptions = [
         <ToolbarContent>
           <ToolbarItem key='address-sort'>
               <Select
-              aria-label="Options menu"
+                aria-label="Options menu"
                 isOpen={operationOpen}
                 onOpenChange={setOperationOpen}
                 onSelect={() => setOperationOpen(false)}
