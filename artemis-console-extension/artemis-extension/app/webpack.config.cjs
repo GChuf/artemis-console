@@ -25,6 +25,7 @@ const TerserPlugin = require("terser-webpack-plugin")
 const CssMinimizerPlugin = require("css-minimizer-webpack-plugin")
 const { WebpackManifestPlugin } = require("webpack-manifest-plugin")
 const CopyWebpackPlugin = require('copy-webpack-plugin')
+const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin')
 const bodyParser = require('body-parser')
 
 const outputPath = path.resolve(__dirname, 'build')
@@ -127,11 +128,22 @@ module.exports = (webpackEnv, args) => {
             singleton: true,
             requiredVersion: dependencies['@hawtio/react'],
           },
+          'monaco-editor': {
+            singleton: true,
+            requiredVersion: dependencies['monaco-editor'],
+          },
           '@patternfly/react-core': {
             singleton: true,
             requiredVersion: dependencies['@patternfly/react-core'],
           },
         }
+      }),
+      new MonacoWebpackPlugin({
+        // 'html' is required as workaround for 'xml'
+        // https://github.com/microsoft/monaco-editor/issues/1509
+        languages: ['xml', 'json', 'html'],
+        publicPath: '',
+        globalAPI: true
       }),
       new InvestigationPlugin({})
     ],
@@ -272,10 +284,16 @@ module.exports = (webpackEnv, args) => {
                 return `${cacheGroupKey}-${packageName}`;
               }
 
-              // Default to the cache group key (e.g., react, patternfly)
+              // Default to the cache group key (e.g., react, patternfly, monaco)
               return cacheGroupKey;
             },
             priority: 30,
+            enforce: true,
+          },
+          monaco: {
+            test: /[\\/]node_modules[\\/](monaco-editor)[\\/]/,
+            name: 'monaco',
+            priority: 25,
             enforce: true,
           },
           hawtio: {
