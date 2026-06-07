@@ -72,8 +72,7 @@ export const SessionsTable: React.FunctionComponent<Navigate> = navigate => {
       eventService.notify({ type: 'warning', message: jolokiaService.errorMessage(error)})
       return JSON.stringify({ data: [], count: 0 })
     })
-    const data = JSON.parse(response);
-    return data;
+    return JSON.parse(response);
   }
 
 

@@ -93,8 +93,7 @@ export const MessagesTable: React.FunctionComponent<MessageProps> = props => {
     const listMessages = async (): Promise<any> => {
       const brokerObjectname = await artemisService.getBrokerObjectName();
       const queueMBean: string = createQueueObjectName(brokerObjectname, props.address, props.routingType, props.queue);
-      const response = await artemisService.getMessages(queueMBean, page, perPage, filter);
-      return response;
+      return await artemisService.getMessages(queueMBean, page, perPage, filter);
     }
     setPerPage(artemisPreferencesService.loadTablePageSize(columnStorage.messages));
     if (!columnsLoaded) {
