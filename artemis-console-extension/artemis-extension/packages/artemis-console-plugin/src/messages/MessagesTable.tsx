@@ -128,6 +128,15 @@ export const MessagesTable = forwardRef<MessagesTableHandle, MessageProps>((prop
   const resultsSizeRef = useRef<number>(0);
   const pageCacheRef = useRef<Map<number, any[]>>(new Map());
 
+  const [activeSort, setActiveSort] = useState<{ id: string; order: 'asc' | 'desc' }>({
+    id: allColumns[0].id,
+    order: 'asc'
+  });
+
+  const updateActiveSort = (id: string, order: 'asc' | 'desc') => {
+    setActiveSort({ id, order });
+  };
+
   useEffect(() => {
     rowsRef.current = rows;
   }, [rows]);
@@ -142,7 +151,7 @@ export const MessagesTable = forwardRef<MessagesTableHandle, MessageProps>((prop
     const listMessages = async (): Promise<any> => {
       const brokerObjectname = await artemisService.getBrokerObjectName();
       const queueMBean: string = createQueueObjectName(brokerObjectname, props.address, props.routingType, props.queue);
-      const response = await artemisService.getMessages(queueMBean, page, perPage, filter);
+      const response = await artemisService.getMessages(queueMBean, page, perPage, filter, activeSort);
       return response;
     }
     const listData = async () => {
