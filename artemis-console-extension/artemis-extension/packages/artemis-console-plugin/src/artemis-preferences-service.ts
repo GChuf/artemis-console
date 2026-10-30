@@ -26,7 +26,8 @@ export const columnStorage: Record<string, string> = {
   consumers: "consumerColumnDefs",
   addresses: "addressesColumnDefs",
   queues: "queuesColumnDefs",
-  messages: "messagesColumnDefs"
+  messages: "messagesColumnDefs",
+  deliveringMessages: "deliveringMessagesColumnDefs"
 }
 
 export interface IArtemisPreferencesService {
@@ -42,6 +43,10 @@ export type ArtemisOptions = {
   artemisBrowseBytesMessages: number
   artemisDefaultPageSize: number
   artemisMaxDiagramAddressSize: number
+  /** Whether to show messages dispatched to consumers (not yet acknowledged) when browsing a queue */
+  artemisBrowseDeliveringMessages: boolean
+  /** Whether to show scheduled messages when browsing a queue */
+  artemisBrowseScheduledMessages: boolean
 }
 
 export const ARTEMIS_PREFERENCES_DEFAULT_VALUES: ArtemisOptions = {
@@ -49,7 +54,9 @@ export const ARTEMIS_PREFERENCES_DEFAULT_VALUES: ArtemisOptions = {
   artemisExpiryQueue: "^ExpiryQueue$",
   artemisBrowseBytesMessages: 99,
   artemisDefaultPageSize: 10,
-  artemisMaxDiagramAddressSize: 20
+  artemisMaxDiagramAddressSize: 20,
+  artemisBrowseDeliveringMessages: true,
+  artemisBrowseScheduledMessages: true
 } as const
 
 export const STORAGE_KEY_ARTEMIS_PREFERENCES = 'artemis.preferences'
@@ -108,6 +115,7 @@ class ArtemisPreferencesService implements IArtemisPreferencesService {
     localStorage.removeItem(columnStorage.producers + PAGE_SIZE);
     localStorage.removeItem(columnStorage.sessions + PAGE_SIZE);
     localStorage.removeItem(columnStorage.messages + PAGE_SIZE);
+    localStorage.removeItem(columnStorage.deliveringMessages + PAGE_SIZE);
   }
 
   private loadFromStorage(): Partial<ArtemisOptions> {
