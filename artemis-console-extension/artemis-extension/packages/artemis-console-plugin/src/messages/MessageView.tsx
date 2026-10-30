@@ -44,17 +44,24 @@ import { ArrowLeftIcon } from '@patternfly/react-icons/dist/esm/icons/arrow-left
 import { Navigate, useLocation, useNavigate } from 'react-router'
 
 import { artemisPluginPath, log } from '../globals'
-import { artemisService, Queue } from '../artemis-service'
+import { artemisService, MESSAGE_STATUS_DELIVERING, MESSAGE_STATUS_SCHEDULED, Queue } from '../artemis-service'
 
 export type MessageProps = {
   message?: Message,
   queue?: Queue
   shownInModal?: boolean
   onClose?: () => void
+  /** Path (under `queues/`) of the message list to go back to, `messages` by default */
+  messageListPath?: string
 }
 
 export type Message = {
   messageID: string
+  /** Set by `artemisService.getMessages()` */
+  status?: string
+  /** Messages in delivery only */
+  connectionID?: string
+  sessionID?: string
   text?: string
   BodyPreview?: number[]
   address: string
@@ -78,6 +85,11 @@ export type Message = {
   ShortProperties?: Record<string, any>
 }
 
+const STATUS_DESCRIPTIONS: Record<string, string> = {
+  [MESSAGE_STATUS_DELIVERING]: 'It was dispatched to a consumer, which has not acknowledged it yet. The body is not available.',
+  [MESSAGE_STATUS_SCHEDULED]: 'It will be delivered to consumers at its scheduled delivery time. The body is not available.'
+}
+
 export const MessageView: React.FunctionComponent<MessageProps> = props => {
 
   const [messageBody, setMessageBody] = useState('')
@@ -85,6 +97,7 @@ export const MessageView: React.FunctionComponent<MessageProps> = props => {
 
   const { search } = useLocation()
   const navigate = useNavigate()
+  const messageListPath = props.messageListPath ?? 'messages'
 
   useEffect(() => {
     if (props.message) {
@@ -93,7 +106,7 @@ export const MessageView: React.FunctionComponent<MessageProps> = props => {
   }, [props.message])
 
   if (!props.message) {
-    return <Navigate to={{ pathname: `${artemisPluginPath}/queues/messages`, search }} replace />
+    return <Navigate to={{ pathname: `${artemisPluginPath}/queues/${messageListPath}`, search }} replace />
   }
 
   const currentMessage = props.message
@@ -239,6 +252,18 @@ export const MessageView: React.FunctionComponent<MessageProps> = props => {
                       <Td>protocol</Td>
                       <Td>{currentMessage.protocol}</Td>
                     </Tr>
+                    {currentMessage.status && <Tr id="status">
+                      <Td>status</Td>
+                      <Td>{currentMessage.status}</Td>
+                    </Tr>}
+                    {currentMessage.connectionID && <Tr id="connectionID">
+                      <Td>connectionID</Td>
+                      <Td>{currentMessage.connectionID}</Td>
+                    </Tr>}
+                    {currentMessage.sessionID && <Tr id="sessionID">
+                      <Td>sessionID</Td>
+                      <Td>{currentMessage.sessionID}</Td>
+                    </Tr>}
                     <Tr id="redelivered">
                       <Td>redelivered</Td>
                       <Td>{"" + currentMessage.redelivered}</Td>
@@ -296,6 +321,13 @@ export const MessageView: React.FunctionComponent<MessageProps> = props => {
       </Grid>
   )
 
+  // messages in delivery and scheduled messages are not returned by browse() and come without the body
+  const statusDescription = currentMessage.status ? STATUS_DESCRIPTIONS[currentMessage.status] : undefined
+  const statusInfo = statusDescription &&
+    <Alert isInline variant='info' title={`This message is ${currentMessage.status!.toLowerCase()}`}>
+      {statusDescription}
+    </Alert>
+
   if (!useModalWrapper) {
     return (
       <>
@@ -309,7 +341,7 @@ export const MessageView: React.FunctionComponent<MessageProps> = props => {
           <Flex align={{ default: 'alignRight' }}>
             <FlexItem>
               <Button variant='link' onClick={() => {
-                navigate({ pathname: `${artemisPluginPath}/queues/messages`, search })
+                navigate({ pathname: `${artemisPluginPath}/queues/${messageListPath}`, search })
               }}>
                 <Icon><ArrowLeftIcon /></Icon> Back to Message list
               </Button>
@@ -324,6 +356,7 @@ export const MessageView: React.FunctionComponent<MessageProps> = props => {
           </Flex>
         </Flex>
         <Divider />
+        {statusInfo}
         <Title headingLevel="h4">Displaying Body as: {messageTextMode}</Title>
         <Panel>
           <PanelMain>
@@ -350,6 +383,7 @@ export const MessageView: React.FunctionComponent<MessageProps> = props => {
           </ModalHeader>
           <ModalBody>
             <Flex direction={{ default: 'column' }} spaceItems={{ default: 'spaceItemsMd' }}>
+              {statusInfo && <FlexItem>{statusInfo}</FlexItem>}
               <FlexItem>
                 <CodeBlock actions={actions}>
                   <CodeBlockCode id="code-content">{messageBody}</CodeBlockCode>

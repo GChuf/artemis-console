@@ -32,7 +32,7 @@ import { useLocation, useNavigate } from 'react-router'
 
 import { Attributes, eventService, jolokiaService, Operations } from '@hawtio/react'
 
-import { artemisService, Queue } from '../artemis-service'
+import { artemisService, MESSAGE_STATUS_DELIVERING, MESSAGE_STATUS_SCHEDULED, Queue } from '../artemis-service'
 import { columnStorage } from '../artemis-preferences-service'
 import { artemisJMXPluginPath, artemisPluginPath } from '../globals'
 import { ArtemisContext } from '../context'
@@ -48,6 +48,7 @@ import {
 import { closeWithEscape, loadFilteredData } from '../table/utils'
 import { ArtemisTable, type ArtemisTableFilterProps } from '../table/ArtemisTable'
 import { SendMessage } from '../messages/SendMessage'
+import { MESSAGE_LIST_PATHS } from '../messages/MessagesTable'
 
 /**
  * Extension of the `ArtemisTableFilterProps` properties for Artemis tabs with `selectQueue`
@@ -97,6 +98,20 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     navigate({ pathname: `${artemisPluginPath}/queues/messages`, search })
   }, [props.selectQueue, navigate, search])
 
+  // a function to show a list of messages in delivery
+  const deliveringView: (row: TableRow) => void = useCallback(row => {
+    props.selectQueue({ name: row.name, address: row.address, routingType: row.routingType })
+    navigate({ pathname: `${artemisPluginPath}/queues/delivering`, search })
+  }, [props.selectQueue, navigate, search])
+
+  // a function to show a list of messages with a given status, using the same view as messageView
+  const messageWithStatusView = useCallback((row: TableRow, status: string) => {
+    props.selectQueue({ name: row.name, address: row.address, routingType: row.routingType })
+    navigate({ pathname: `${artemisPluginPath}/queues/${MESSAGE_LIST_PATHS[status]}`, search })
+  }, [props.selectQueue, navigate, search])
+  const inDeliveryView = useCallback((row: TableRow) => messageWithStatusView(row, MESSAGE_STATUS_DELIVERING), [messageWithStatusView])
+  const scheduledView = useCallback((row: TableRow) => messageWithStatusView(row, MESSAGE_STATUS_SCHEDULED), [messageWithStatusView])
+
   // for queues, all the values come (from the broker in JSON) as Strings, but lots of these are numbers and booleans
   // Note: for <QueuesTable> allColumns can't be defined at module level, because of the link property which uses
   // `props.selectQueue`
@@ -119,13 +134,13 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     { id: 'messagesAdded', type: ColumnType.NUMBER, name: 'Total Messages Added', visible: false, sortable: true, filterable: true },
     { id: 'messagesAcked', type: ColumnType.NUMBER, name: 'Total Messages Acknowledged', visible: false, sortable: true, filterable: true },
     { id: 'messagesExpired', type: ColumnType.NUMBER, name: 'Total Messages Expired', visible: false, sortable: true, filterable: true },
-    { id: 'deliveringCount', type: ColumnType.NUMBER, name: 'Delivering Count', visible: false, sortable: true, filterable: true },
+    { id: 'deliveringCount', type: ColumnType.NUMBER, name: 'Delivering Count', visible: true, sortable: true, filterable: true, link: deliveringView },
     { id: 'messagesKilled', type: ColumnType.NUMBER, name: 'Messages Killed', visible: false, sortable: true, filterable: true },
     { id: 'directDeliver', type: ColumnType.BOOLEAN, name: 'Direct Deliver', visible: false, sortable: true, filterable: true },
     { id: 'exclusive', type: ColumnType.BOOLEAN, name: 'Exclusive', visible: false, sortable: true, filterable: true },
     { id: 'lastValue', type: ColumnType.BOOLEAN, name: 'Last Value', visible: false, sortable: true, filterable: true },
     { id: 'lastValueKey', type: ColumnType.STRING, name: 'Last Value Key', visible: false, sortable: true, filterable: true },
-    { id: 'scheduledCount', type: ColumnType.NUMBER, name: 'Scheduled Count', visible: false, sortable: true, filterable: true },
+    { id: 'scheduledCount', type: ColumnType.NUMBER, name: 'Scheduled Count', visible: false, sortable: true, filterable: true, link: scheduledView },
     { id: 'groupRebalance', type: ColumnType.BOOLEAN, name: 'Group Rebalance', visible: false, sortable: true, filterable: true },
     { id: 'groupRebalancePauseDispatch', type: ColumnType.BOOLEAN, name: 'Group Rebalance Pause Dispatch', visible: false, sortable: true, filterable: true },
     { id: 'groupBuckets', type: ColumnType.NUMBER, name: 'Group Buckets', visible: false, sortable: true, filterable: true },
@@ -136,7 +151,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     { id: 'delayBeforeDispatch', type: ColumnType.NUMBER, name: 'Delay Before Dispatch', visible: false, sortable: true, filterable: true },
     { id: 'autoDelete', type: ColumnType.BOOLEAN, name: 'Auto Delete', visible: false, sortable: true, filterable: true },
     { id: 'internalQueue', type: ColumnType.BOOLEAN, name: 'Internal', visible: false, sortable: true, filterable: true }
-  ], [messageView])
+  ], [messageView, deliveringView, scheduledView])
 
   const listQueues = useCallback(async (page: number, perPage: number, sort: ActiveSort | undefined, filters: Filter[]): Promise<any> => {
     return loadFilteredData('queues', artemisService.getQueues.bind(artemisService), page, perPage, sort, filters, initialFilter)
@@ -256,7 +271,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
       }
     ]
 
-    if (rowPerms?.canSend || rowPerms?.canBrowse || rowPerms?.canPurge || rowPerms?.canDelete) {
+    if (rowPerms?.canSend || rowPerms?.canBrowse || rowPerms?.canBrowseDelivering || rowPerms?.canPurge || rowPerms?.canDelete) {
       actions.push({ isSeparator: true })
     }
 
@@ -276,6 +291,14 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
         title: "Browse Messages",
         onClick: () => {
           messageView(row)
+        }
+      })
+    }
+    if (rowPerms?.canBrowseDelivering) {
+      actions.push({
+        title: "Browse Messages In Delivery",
+        onClick: () => {
+          inDeliveryView(row)
         }
       })
     }
@@ -301,7 +324,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     }
 
     return actions
-  }, [routeNavigate, permissions])
+  }, [routeNavigate, permissions, inDeliveryView])
 
   const reload = useCallback(() => {
     setRefreshCount(c => c + 1)
