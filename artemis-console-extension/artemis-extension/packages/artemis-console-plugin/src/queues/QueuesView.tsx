@@ -20,12 +20,13 @@ import { Route, Routes } from 'react-router'
 import { Queue } from '../artemis-service'
 import { QueuesTable } from './QueuesTable'
 import { MessagesTable } from '../messages/MessagesTable'
+import { DeliveringMessagesTable } from '../messages/DeliveringMessagesTable'
 import { Message, MessageView } from '../messages/MessageView'
 import type { ArtemisTableFilterProps } from '../table/ArtemisTable'
 
 // Queues View is more sophisticated than other "Artemis Tabs", because it's not just a list of queues. This view
 // also presents list of messages for a queue and finally a particular message details.
-// This complexity makes this component another routes collection (queues, messages, details)
+// This complexity makes this component another routes collection (queues, messages, details, delivering messages)
 export const QueuesView: React.FunctionComponent<ArtemisTableFilterProps> = props => {
 
   // state used for sub-routes for the messages of the queue ...
@@ -45,6 +46,7 @@ export const QueuesView: React.FunctionComponent<ArtemisTableFilterProps> = prop
       <Routes>
         <Route key='messages' path='messages' element={<MessagesTable queue={currentQueue} selectMessage={selectMessage} showTitle showBackToQueues />} />
         <Route key='message-details' path='message/details' element={<MessageView queue={currentQueue} message={currentMessage} />} />
+        <Route key='delivering' path='delivering' element={<DeliveringMessagesTable queue={currentQueue} />} />
         <Route key='queues' path='' element={<QueuesTable switchTab={props.switchTab} filters={props.filters} selectQueue={selectQueue} editGlobalFilter={props.editGlobalFilter} />} />
       </Routes>
   )

@@ -162,3 +162,37 @@ describe("Artemis Service permission checks", () => {
   })
 
 })
+
+/**
+ * Tests for converting the result of QueueControl#listDeliveringMessagesAsJSON()
+ */
+describe("Artemis Service delivering messages", () => {
+
+  test("flattenDeliveringMessages adds consumer to each message", () => {
+    const consumer1 = "ServerConsumer [id=87656187:ce3772ef-d138-11f1-a927-0250f2559b12:0, filter=null, binding=LocalQueueBinding [address=q, queue=QueueImpl[name=q, temp=false]@4edc1bbf]]"
+    const consumer2 = "ServerConsumer [id=1234:abcd-ef:3, filter=null, binding=LocalQueueBinding [address=q]]"
+    const json = JSON.stringify([
+      { consumerName: consumer1, elements: [{ messageID: 1, priority: 4 }, { messageID: 2, priority: 4, myProp: "x" }] },
+      { consumerName: consumer2, elements: [{ messageID: 3, durable: true }] }
+    ])
+    const ids1 = { connectionID: "87656187", sessionID: "ce3772ef-d138-11f1-a927-0250f2559b12", consumerID: "0", consumer: consumer1 }
+    const ids2 = { connectionID: "1234", sessionID: "abcd-ef", consumerID: "3", consumer: consumer2 }
+    expect(artemisService.flattenDeliveringMessages(json)).toEqual([
+      { messageID: 1, priority: 4, ...ids1 },
+      { messageID: 2, priority: 4, myProp: "x", ...ids1 },
+      { messageID: 3, durable: true, ...ids2 }
+    ])
+  })
+
+  test("parseConsumerName handles sessions and unknown formats", () => {
+    expect(artemisService.parseConsumerName("ServerSession [id=1234:abcd-ef]"))
+      .toEqual({ connectionID: "1234", sessionID: "abcd-ef", consumerID: undefined })
+    expect(artemisService.parseConsumerName("something else")).toEqual({})
+  })
+
+  test("flattenDeliveringMessages handles no delivering messages", () => {
+    expect(artemisService.flattenDeliveringMessages("[]")).toEqual([])
+    expect(artemisService.flattenDeliveringMessages("")).toEqual([])
+  })
+
+})

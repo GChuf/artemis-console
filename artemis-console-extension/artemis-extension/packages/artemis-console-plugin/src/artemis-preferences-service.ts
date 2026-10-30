@@ -26,7 +26,8 @@ export const columnStorage: Record<string, string> = {
   consumers: "consumerColumnDefs",
   addresses: "addressesColumnDefs",
   queues: "queuesColumnDefs",
-  messages: "messagesColumnDefs"
+  messages: "messagesColumnDefs",
+  deliveringMessages: "deliveringMessagesColumnDefs"
 }
 
 export interface IArtemisPreferencesService {
@@ -108,6 +109,7 @@ class ArtemisPreferencesService implements IArtemisPreferencesService {
     localStorage.removeItem(columnStorage.producers + PAGE_SIZE);
     localStorage.removeItem(columnStorage.sessions + PAGE_SIZE);
     localStorage.removeItem(columnStorage.messages + PAGE_SIZE);
+    localStorage.removeItem(columnStorage.deliveringMessages + PAGE_SIZE);
   }
 
   private loadFromStorage(): Partial<ArtemisOptions> {

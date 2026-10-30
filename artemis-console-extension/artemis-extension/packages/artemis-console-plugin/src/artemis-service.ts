@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { ActiveSort, type Filter, type FilterOperation } from './table/types'
+import { ActiveSort, type Filter, type FilterOperation, type TableRow } from './table/types'
 import { eventService, jolokiaService, MBeanNode, parseMBeanName, workspace } from '@hawtio/react'
 import { createAddressObjectName, createQueueObjectName } from './util/jmx'
 import { log } from './globals'
@@ -151,6 +151,7 @@ export type BrokerTopology = {
 export type queuePermissions = {
   canSend: boolean;
   canBrowse: boolean;
+  canBrowseDelivering: boolean;
   canPurge: boolean;
   canDelete: boolean;
 }
@@ -205,6 +206,7 @@ const CREATE_ADDRESS_SIG = "createAddress(java.lang.String,java.lang.String)"
 const COUNT_MESSAGES_SIG = "countMessages()";
 const COUNT_MESSAGES_SIG2 = "countMessages(java.lang.String)";
 const BROWSE_SIG = "browse(int,int,java.lang.String)";
+const LIST_DELIVERING_MESSAGES_SIG = "listDeliveringMessagesAsJSON()";
 
 /* Signatures of JMX methods on the broker MBean to fill main tabs of <ArtemisTabs> */
 
@@ -589,6 +591,47 @@ class ArtemisService {
         };
     }
 
+    /**
+     * Returns messages which were dispatched to consumers but not yet acknowledged. These are not returned by
+     * `browse()`. Each row contains the fields of `org.apache.activemq.artemis.api.core.Message#toMap()` (headers
+     * and message properties, but no body) and a `consumer` field identifying the consumer holding the message.
+     */
+    async getDeliveringMessages(mBean: string): Promise<TableRow[]> {
+        const json = await jolokiaService.execute(mBean, LIST_DELIVERING_MESSAGES_SIG) as string;
+        return this.flattenDeliveringMessages(json);
+    }
+
+    /**
+     * Converts the result of `QueueControl#listDeliveringMessagesAsJSON()`, which is an array of
+     * `{consumerName, elements: [message, ...]}` objects, into a flat list of messages with a `consumer` field
+     * and `connectionID`, `sessionID` and `consumerID` fields parsed from it.
+     */
+    flattenDeliveringMessages = (json: string): TableRow[] => {
+        if (!json) {
+            return [];
+        }
+        const groups = JSON.parse(json) as { consumerName: string, elements: TableRow[] }[];
+        return groups.flatMap(group => {
+            const ids = this.parseConsumerName(group.consumerName);
+            return (group.elements ?? []).map(message => ({ ...message, ...ids, consumer: group.consumerName }));
+        });
+    }
+
+
+    /**
+     * Parses the result of `ServerConsumer#toManagementString()`, which is
+     * `ServerConsumer [id=<connectionID>:<sessionID>:<consumerID>, ...]`, or `ServerSession#toManagementString()`,
+     * which is `ServerSession [id=<connectionID>:<sessionID>]` (for messages acknowledged in a transaction which is
+     * not committed yet, but whose consumer is already closed).
+     */
+    parseConsumerName = (consumerName: string): { connectionID?: string, sessionID?: string, consumerID?: string } => {
+        const match = /^Server(?:Consumer|Session) \[id=([^:,\]]*):([^:,\]]*)(?::([^:,\]]*))?/.exec(consumerName ?? '');
+        if (!match) {
+            return {};
+        }
+        return { connectionID: match[1], sessionID: match[2], consumerID: match[3] };
+    }
+
     // ---- Methods that call Jolokia to get a filtered/sorted/paged data from the Broker using dedicated JMX methods
     //      all the methods use jolokiaService.execute which returns a Promise. The signatures for the MBean operations
     //      at the broker side use String as the return type, so the value is a String representation of JSON object
@@ -887,6 +930,7 @@ class ArtemisService {
                     canSend: node.hasInvokeRights(SEND_MESSAGE_SIG) ?? false,
                     canPurge: node.hasInvokeRights(REMOVE_ALL_MESSAGES_SIG) ?? false,
                     canBrowse: node.hasInvokeRights(BROWSE_SIG) ?? false,
+                    canBrowseDelivering: node.hasInvokeRights(LIST_DELIVERING_MESSAGES_SIG) ?? false,
                     canDelete: broker.hasInvokeRights(DESTROY_QUEUE_SIG) ?? false
                 };
             }

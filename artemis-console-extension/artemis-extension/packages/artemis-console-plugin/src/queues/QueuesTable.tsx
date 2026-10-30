@@ -95,6 +95,12 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     navigate({ pathname: `${artemisPluginPath}/queues/messages`, search })
   }, [props.selectQueue])
 
+  // a function to show a list of messages dispatched to consumers of a queue, but not yet acknowledged
+  const deliveringView: (row: TableRow) => void = useCallback(row => {
+    props.selectQueue({ name: row.name, address: row.address, routingType: row.routingType })
+    navigate({ pathname: `${artemisPluginPath}/queues/delivering`, search })
+  }, [props.selectQueue])
+
   // for queues, all the values come (from the broker in JSON) as Strings, but lots of these are numbers and booleans
   // Note: for <QueuesTable> allColumns can't be defined at module level, because of the link property which uses
   // `props.selectQueue`
@@ -117,7 +123,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     { id: 'messagesAdded', type: ColumnType.NUMBER, name: 'Total Messages Added', visible: false, sortable: true, filterable: true },
     { id: 'messagesAcked', type: ColumnType.NUMBER, name: 'Total Messages Acknowledged', visible: false, sortable: true, filterable: true },
     { id: 'messagesExpired', type: ColumnType.NUMBER, name: 'Total Messages Expired', visible: false, sortable: true, filterable: true },
-    { id: 'deliveringCount', type: ColumnType.NUMBER, name: 'Delivering Count', visible: false, sortable: true, filterable: true },
+    { id: 'deliveringCount', type: ColumnType.NUMBER, name: 'Delivering Count', visible: true, sortable: true, filterable: true, link: deliveringView },
     { id: 'messagesKilled', type: ColumnType.NUMBER, name: 'Messages Killed', visible: false, sortable: true, filterable: true },
     { id: 'directDeliver', type: ColumnType.BOOLEAN, name: 'Direct Deliver', visible: false, sortable: true, filterable: true },
     { id: 'exclusive', type: ColumnType.BOOLEAN, name: 'Exclusive', visible: false, sortable: true, filterable: true },
@@ -134,7 +140,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     { id: 'delayBeforeDispatch', type: ColumnType.NUMBER, name: 'Delay Before Dispatch', visible: false, sortable: true, filterable: true },
     { id: 'autoDelete', type: ColumnType.BOOLEAN, name: 'Auto Delete', visible: false, sortable: true, filterable: true },
     { id: 'internalQueue', type: ColumnType.BOOLEAN, name: 'Internal', visible: false, sortable: true, filterable: true }
-  ], [messageView])
+  ], [messageView, deliveringView])
 
   const listQueues = useCallback(async (page: number, perPage: number, sort: ActiveSort | undefined, filters: Filter[]): Promise<any> => {
     return loadFilteredData('queues', artemisService.getQueues.bind(artemisService), page, perPage, sort, filters, initialFilter)
@@ -278,6 +284,13 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     }
   })
 
+  const browseDeliveringAction = (row: TableRow): IAction => ({
+    title: "Browse Delivering Messages",
+    onClick: () => {
+      deliveringView(row)
+    }
+  })
+
   const permissions = artemisService.getQueuePermissions(brokerNode)
 
   const getRowActions = (row: TableRow): IAction[] => {
@@ -295,7 +308,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
       operationsAction(rowName, rowAddress, rowRoutingType),
     ]
 
-    if (rowPerms?.canSend || rowPerms?.canBrowse || rowPerms?.canPurge || rowPerms?.canDelete) {
+    if (rowPerms?.canSend || rowPerms?.canBrowse || rowPerms?.canBrowseDelivering || rowPerms?.canPurge || rowPerms?.canDelete) {
       actions.push({ isSeparator: true })
     }
 
@@ -304,6 +317,9 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     }
     if (rowPerms?.canBrowse) {
       actions.push(browseAction(row))
+    }
+    if (rowPerms?.canBrowseDelivering) {
+      actions.push(browseDeliveringAction(row))
     }
     if (rowPerms?.canPurge) {
       actions.push(purgeAction(rowName, rowAddress, rowRoutingType))
