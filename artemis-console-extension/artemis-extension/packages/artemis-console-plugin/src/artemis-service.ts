@@ -207,6 +207,15 @@ const COUNT_MESSAGES_SIG = "countMessages()";
 const COUNT_MESSAGES_SIG2 = "countMessages(java.lang.String)";
 const BROWSE_SIG = "browse(int,int,java.lang.String)";
 const LIST_DELIVERING_MESSAGES_SIG = "listDeliveringMessagesAsJSON()";
+const LIST_SCHEDULED_MESSAGES_SIG = "listScheduledMessagesAsJSON()";
+// not available yet on any broker version, the filter is shown only when the broker has them
+const LIST_DELIVERING_MESSAGES_FILTER_SIG = "listDeliveringMessagesAsJSON(java.lang.String)";
+const LIST_SCHEDULED_MESSAGES_FILTER_SIG = "listScheduledMessagesAsJSON(java.lang.String)";
+
+/** Values of `status` field of messages returned by `getMessages()` */
+export const MESSAGE_STATUS_WAITING = "Waiting";
+export const MESSAGE_STATUS_DELIVERING = "In delivery";
+export const MESSAGE_STATUS_SCHEDULED = "Scheduled";
 
 /* Signatures of JMX methods on the broker MBean to fill main tabs of <ArtemisTabs> */
 
@@ -568,7 +577,13 @@ class ArtemisService {
         return await jolokiaService.execute(await this.getBrokerObjectName(), CREATE_ADDRESS_SIG, [address, routingType])
     }
 
-    async getMessages(mBean: string, page: number, perPage: number, filter: string) {
+    /**
+     * Returns one page of messages of a queue. `browse()` returns only waiting messages, so messages dispatched to
+     * consumers (not yet acknowledged) and scheduled messages may be added after them (without a filter only).
+     * Each message gets a `status` field.
+     */
+    async getMessages(mBean: string, page: number, perPage: number, filter: string,
+                      includeDelivering: boolean = false, includeScheduled: boolean = false) {
         let count: number;
         if (filter && filter.length > 0) {
             count = await jolokiaService.execute(mBean, COUNT_MESSAGES_SIG2, [filter]).catch(error => {
@@ -584,11 +599,94 @@ class ArtemisService {
         const messages = await jolokiaService.execute(mBean, BROWSE_SIG, [page, perPage, filter]).catch(error => {
             eventService.notify({ type: "warning", message: jolokiaService.errorMessage(error) })
             return []
-        }) as string;
-        return {
-            data: messages,
+        }) as TableRow[];
+        const waitingOnly = {
+            data: messages.map(message => ({ ...message, status: MESSAGE_STATUS_WAITING })),
             count: count
         };
+        // with a filter, the count includes only waiting messages and the filter can't be applied to
+        // delivering and scheduled messages
+        if ((filter && filter.length > 0) || (!includeDelivering && !includeScheduled)) {
+            return waitingOnly;
+        }
+
+        // without a filter, the count includes delivering and scheduled messages, which are not returned by browse().
+        // Messages of a kind which is not shown are subtracted from the count
+        const listOrCount = (include: boolean, list: () => Promise<TableRow[]>, countAttribute: string) => include
+            ? list().then(rows => ({ rows, hidden: 0 }))
+            : (jolokiaService.readAttribute(mBean, countAttribute) as Promise<number>).then(hidden => ({ rows: [] as TableRow[], hidden }));
+        const results = await Promise.all([
+            listOrCount(includeDelivering, () => this.getDeliveringMessages(mBean), "DeliveringCount"),
+            listOrCount(includeScheduled, () => this.getScheduledMessages(mBean), "ScheduledCount")
+        ]).catch(error => {
+            // for example no permission to call the operation
+            log.debug("Can't list delivering or scheduled messages", error);
+            return undefined;
+        });
+        if (!results) {
+            return waitingOnly;
+        }
+        const [delivering, scheduled] = results;
+        const visibleCount = Math.max(0, count - delivering.hidden - scheduled.hidden);
+        return {
+            data: this.mergeMessages(messages, [
+                { status: MESSAGE_STATUS_DELIVERING, messages: delivering.rows },
+                { status: MESSAGE_STATUS_SCHEDULED, messages: scheduled.rows }
+            ], visibleCount, page, perPage),
+            count: visibleCount
+        };
+    }
+
+    /**
+     * Returns one page of a list made of waiting messages followed by other messages (delivering, scheduled).
+     * `waitingPage` is the given page of waiting messages (as returned by `browse()`) and `count` is the number of
+     * all the messages in the list. Each message gets a `status` field.
+     */
+    mergeMessages = (waitingPage: TableRow[], others: { status: string, messages: TableRow[] }[], count: number, page: number, perPage: number): TableRow[] => {
+        const otherMessages = others.flatMap(group => group.messages.map(message => ({ ...message, status: group.status })));
+        const waitingCount = Math.max(0, count - otherMessages.length);
+        const othersStart = Math.max(0, (page - 1) * perPage - waitingCount);
+        return [
+            ...waitingPage.map(message => ({ ...message, status: MESSAGE_STATUS_WAITING })),
+            ...otherMessages.slice(othersStart, othersStart + Math.max(0, perPage - waitingPage.length))
+        ];
+    }
+
+    /**
+     * Returns one page of in-delivery or scheduled messages of a queue, in the same form as `getMessages()`.
+     * A filter can be used only when `canFilterMessages()` returns true.
+     */
+    async getMessagesWithStatus(mBean: string, status: string, page: number, perPage: number, filter: string = "") {
+        const list = status === MESSAGE_STATUS_SCHEDULED
+            ? this.getScheduledMessages(mBean, filter)
+            : this.getDeliveringMessages(mBean, filter);
+        const messages = await list.catch(error => {
+            eventService.notify({ type: "warning", message: jolokiaService.errorMessage(error) })
+            return [] as TableRow[]
+        });
+        return {
+            data: this.mergeMessages([], [{ status, messages }], messages.length, page, perPage),
+            count: messages.length
+        };
+    }
+
+    /**
+     * Returns true if the broker can filter in-delivery or scheduled messages of the queue.
+     */
+    canFilterMessages = (broker: MBeanNode | undefined, queue: string, status: string): boolean => {
+        const signature = status === MESSAGE_STATUS_SCHEDULED ? LIST_SCHEDULED_MESSAGES_FILTER_SIG : LIST_DELIVERING_MESSAGES_FILTER_SIG;
+        return this.doesOperationExist(broker, queue, signature);
+    }
+
+    /**
+     * Returns scheduled messages, which are not returned by `browse()`. Each row contains the fields of
+     * `org.apache.activemq.artemis.api.core.Message#toMap()` (headers and message properties, but no body).
+     */
+    async getScheduledMessages(mBean: string, filter: string = ""): Promise<TableRow[]> {
+        const json = (filter.length > 0
+            ? await jolokiaService.execute(mBean, LIST_SCHEDULED_MESSAGES_FILTER_SIG, [filter])
+            : await jolokiaService.execute(mBean, LIST_SCHEDULED_MESSAGES_SIG)) as string;
+        return json ? JSON.parse(json) as TableRow[] : [];
     }
 
     /**
@@ -596,8 +694,10 @@ class ArtemisService {
      * `browse()`. Each row contains the fields of `org.apache.activemq.artemis.api.core.Message#toMap()` (headers
      * and message properties, but no body) and a `consumer` field identifying the consumer holding the message.
      */
-    async getDeliveringMessages(mBean: string): Promise<TableRow[]> {
-        const json = await jolokiaService.execute(mBean, LIST_DELIVERING_MESSAGES_SIG) as string;
+    async getDeliveringMessages(mBean: string, filter: string = ""): Promise<TableRow[]> {
+        const json = (filter.length > 0
+            ? await jolokiaService.execute(mBean, LIST_DELIVERING_MESSAGES_FILTER_SIG, [filter])
+            : await jolokiaService.execute(mBean, LIST_DELIVERING_MESSAGES_SIG)) as string;
         return this.flattenDeliveringMessages(json);
     }
 
@@ -957,12 +1057,38 @@ class ArtemisService {
 
     doesMethodExist = (broker: MBeanNode | undefined, queue: string, method: string): boolean => {
         if(broker) {
-            const queueMBean = broker.parent?.find(node => { 
-                return node.propertyList?.get('subcomponent') === 'queues' && node.name === queue 
+            const queueMBean = broker.parent?.find(node => {
+                return node.propertyList?.get('subcomponent') === 'queues' && node.name === queue
             })
             return queueMBean?queueMBean.hasOperations(method): false;
         }
         return false;
+    }
+
+    /**
+     * Like `doesMethodExist()`, but checks a signature such as `name(java.lang.String)`, so one overload of
+     * an operation can be told from another.
+     */
+    doesOperationExist = (broker: MBeanNode | undefined, queue: string, signature: string): boolean => {
+        const queueMBean = broker?.parent?.find(node => {
+            return node.propertyList?.get('subcomponent') === 'queues' && node.name === queue
+        })
+        return this.hasOperationSignature(queueMBean?.mbean?.op, signature);
+    }
+
+    /**
+     * Checks the operations of an MBean (as returned by Jolokia `list`, overloads are kept in an array) for
+     * the given signature.
+     */
+    hasOperationSignature = (operations: Record<string, any> | undefined, signature: string): boolean => {
+        const match = /^([^(]+)\((.*)\)$/.exec(signature);
+        if (!match || !operations || !operations[match[1]]) {
+            return false;
+        }
+        const argTypes = match[2].length > 0 ? match[2].split(',') : [];
+        const overloads: { args: { type: string }[] }[] = [operations[match[1]]].flat();
+        return overloads.some(op => op.args.length === argTypes.length
+            && op.args.every((arg, index) => arg.type === argTypes[index]));
     }
 
     doesListLockCoordinatorMethodExist = (broker: MBeanNode | undefined): boolean => {

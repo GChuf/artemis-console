@@ -190,6 +190,68 @@ describe("Artemis Service delivering messages", () => {
     expect(artemisService.parseConsumerName("something else")).toEqual({})
   })
 
+  test("mergeMessages appends delivering messages after waiting messages", () => {
+    // 3 waiting + 4 delivering messages, 5 per page
+    const delivering = [{ status: "In delivery", messages: [{ messageID: 11 }, { messageID: 12 }, { messageID: 13 }, { messageID: 14 }] }]
+    const page1 = artemisService.mergeMessages([{ messageID: 1 }, { messageID: 2 }, { messageID: 3 }], delivering, 7, 1, 5)
+    expect(page1).toEqual([
+      { messageID: 1, status: "Waiting" },
+      { messageID: 2, status: "Waiting" },
+      { messageID: 3, status: "Waiting" },
+      { messageID: 11, status: "In delivery" },
+      { messageID: 12, status: "In delivery" }
+    ])
+    // browse() returns nothing for page 2
+    const page2 = artemisService.mergeMessages([], delivering, 7, 2, 5)
+    expect(page2).toEqual([
+      { messageID: 13, status: "In delivery" },
+      { messageID: 14, status: "In delivery" }
+    ])
+  })
+
+  test("mergeMessages with only delivering messages", () => {
+    const delivering = [{ status: "In delivery", messages: [{ messageID: 11 }, { messageID: 12 }] }]
+    expect(artemisService.mergeMessages([], delivering, 2, 1, 10)).toEqual([
+      { messageID: 11, status: "In delivery" },
+      { messageID: 12, status: "In delivery" }
+    ])
+  })
+
+  test("mergeMessages shows scheduled messages after delivering messages", () => {
+    // 1 waiting + 2 delivering + 2 scheduled messages, 2 per page
+    const others = [
+      { status: "In delivery", messages: [{ messageID: 11 }, { messageID: 12 }] },
+      { status: "Scheduled", messages: [{ messageID: 21 }, { messageID: 22 }] }
+    ]
+    expect(artemisService.mergeMessages([{ messageID: 1 }], others, 5, 1, 2)).toEqual([
+      { messageID: 1, status: "Waiting" },
+      { messageID: 11, status: "In delivery" }
+    ])
+    expect(artemisService.mergeMessages([], others, 5, 2, 2)).toEqual([
+      { messageID: 12, status: "In delivery" },
+      { messageID: 21, status: "Scheduled" }
+    ])
+    expect(artemisService.mergeMessages([], others, 5, 3, 2)).toEqual([
+      { messageID: 22, status: "Scheduled" }
+    ])
+  })
+
+  test("hasOperationSignature tells overloads apart", () => {
+    const operations = {
+      listScheduledMessagesAsJSON: { args: [], ret: "java.lang.String" },
+      browse: [
+        { args: [], ret: "[Ljavax.management.openmbean.CompositeData;" },
+        { args: [{ type: "java.lang.String" }], ret: "[Ljavax.management.openmbean.CompositeData;" }
+      ]
+    }
+    expect(artemisService.hasOperationSignature(operations, "listScheduledMessagesAsJSON()")).toBe(true)
+    expect(artemisService.hasOperationSignature(operations, "listScheduledMessagesAsJSON(java.lang.String)")).toBe(false)
+    expect(artemisService.hasOperationSignature(operations, "browse(java.lang.String)")).toBe(true)
+    expect(artemisService.hasOperationSignature(operations, "browse(int,int)")).toBe(false)
+    expect(artemisService.hasOperationSignature(operations, "listDeliveringMessagesAsJSON()")).toBe(false)
+    expect(artemisService.hasOperationSignature(undefined, "browse()")).toBe(false)
+  })
+
   test("flattenDeliveringMessages handles no delivering messages", () => {
     expect(artemisService.flattenDeliveringMessages("[]")).toEqual([])
     expect(artemisService.flattenDeliveringMessages("")).toEqual([])

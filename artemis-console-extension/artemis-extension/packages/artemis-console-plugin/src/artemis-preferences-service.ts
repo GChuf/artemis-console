@@ -43,6 +43,10 @@ export type ArtemisOptions = {
   artemisBrowseBytesMessages: number
   artemisDefaultPageSize: number
   artemisMaxDiagramAddressSize: number
+  /** Whether to show messages dispatched to consumers (not yet acknowledged) when browsing a queue */
+  artemisBrowseDeliveringMessages: boolean
+  /** Whether to show scheduled messages when browsing a queue */
+  artemisBrowseScheduledMessages: boolean
 }
 
 export const ARTEMIS_PREFERENCES_DEFAULT_VALUES: ArtemisOptions = {
@@ -50,7 +54,9 @@ export const ARTEMIS_PREFERENCES_DEFAULT_VALUES: ArtemisOptions = {
   artemisExpiryQueue: "^ExpiryQueue$",
   artemisBrowseBytesMessages: 99,
   artemisDefaultPageSize: 10,
-  artemisMaxDiagramAddressSize: 20
+  artemisMaxDiagramAddressSize: 20,
+  artemisBrowseDeliveringMessages: true,
+  artemisBrowseScheduledMessages: true
 } as const
 
 export const STORAGE_KEY_ARTEMIS_PREFERENCES = 'artemis.preferences'

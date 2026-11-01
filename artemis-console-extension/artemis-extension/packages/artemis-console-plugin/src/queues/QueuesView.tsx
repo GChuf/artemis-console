@@ -17,9 +17,9 @@
 import React, { useState } from 'react'
 import { Route, Routes } from 'react-router'
 
-import { Queue } from '../artemis-service'
+import { MESSAGE_STATUS_DELIVERING, MESSAGE_STATUS_SCHEDULED, Queue } from '../artemis-service'
 import { QueuesTable } from './QueuesTable'
-import { MessagesTable } from '../messages/MessagesTable'
+import { MESSAGE_LIST_PATHS, MessagesTable } from '../messages/MessagesTable'
 import { DeliveringMessagesTable } from '../messages/DeliveringMessagesTable'
 import { Message, MessageView } from '../messages/MessageView'
 import type { ArtemisTableFilterProps } from '../table/ArtemisTable'
@@ -46,6 +46,10 @@ export const QueuesView: React.FunctionComponent<ArtemisTableFilterProps> = prop
       <Routes>
         <Route key='messages' path='messages' element={<MessagesTable queue={currentQueue} selectMessage={selectMessage} showTitle showBackToQueues />} />
         <Route key='message-details' path='message/details' element={<MessageView queue={currentQueue} message={currentMessage} />} />
+        {[MESSAGE_STATUS_DELIVERING, MESSAGE_STATUS_SCHEDULED].flatMap(status => [
+          <Route key={status} path={MESSAGE_LIST_PATHS[status]} element={<MessagesTable queue={currentQueue} selectMessage={selectMessage} showTitle showBackToQueues onlyStatus={status} />} />,
+          <Route key={`${status}-details`} path={`${MESSAGE_LIST_PATHS[status]}/details`} element={<MessageView queue={currentQueue} message={currentMessage} messageListPath={MESSAGE_LIST_PATHS[status]} />} />
+        ])}
         <Route key='delivering' path='delivering' element={<DeliveringMessagesTable queue={currentQueue} />} />
         <Route key='queues' path='' element={<QueuesTable switchTab={props.switchTab} filters={props.filters} selectQueue={selectQueue} editGlobalFilter={props.editGlobalFilter} />} />
       </Routes>

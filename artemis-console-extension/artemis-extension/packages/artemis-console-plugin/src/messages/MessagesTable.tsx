@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Toolbar,
   ToolbarContent,
@@ -40,7 +40,9 @@ import {
   Title,
   Flex,
   FlexItem,
-  PageSection
+  PageSection,
+  Switch,
+  Tooltip
 } from '@patternfly/react-core'
 import { Thead, Tr, Th, Tbody, Td, ActionsColumn, IAction, Table, InnerScrollContainer } from '@patternfly/react-table'
 import { HelpIcon } from '@patternfly/react-icons/dist/esm/icons/help-icon'
@@ -51,7 +53,13 @@ import { eventService, jolokiaService } from '@hawtio/react'
 
 import { ArtemisContext } from '../context'
 import { artemisPluginPath, log } from '../globals'
-import { artemisService, Queue } from '../artemis-service'
+import {
+  artemisService,
+  MESSAGE_STATUS_DELIVERING,
+  MESSAGE_STATUS_SCHEDULED,
+  MESSAGE_STATUS_WAITING,
+  Queue
+} from '../artemis-service'
 import { artemisPreferencesService, columnStorage } from '../artemis-preferences-service'
 import { ColumnType, type TableColumn, TableRow } from '../table/types'
 import { closeWithEscape } from '../table/utils'
@@ -66,6 +74,14 @@ export type MessageTableProps = {
   showTitle?: boolean
   showBackToQueues?: boolean
   noNavigate?: boolean
+  /** Show only messages with this status (`MESSAGE_STATUS_DELIVERING` or `MESSAGE_STATUS_SCHEDULED`) */
+  onlyStatus?: string
+}
+
+/** Paths (under `queues/`) of the lists of messages with a given status, details are under `<path>/details` */
+export const MESSAGE_LIST_PATHS: Record<string, string> = {
+  [MESSAGE_STATUS_DELIVERING]: 'in-delivery',
+  [MESSAGE_STATUS_SCHEDULED]: 'scheduled'
 }
 
 type FilterInformationProps = {
@@ -156,6 +172,25 @@ const FilterInformation: React.FunctionComponent<FilterInformationProps> = props
   </Modal>
 )
 
+// messages in delivery and scheduled messages (only waiting messages can be deleted, moved, copied or retried)
+const isViewOnly = (row: TableRow): boolean => row.status !== undefined && row.status !== MESSAGE_STATUS_WAITING
+
+const NOT_SELECTABLE_MESSAGES: Record<string, string> = {
+  [MESSAGE_STATUS_DELIVERING]: 'Cannot select messages in delivery',
+  [MESSAGE_STATUS_SCHEDULED]: 'Cannot select scheduled messages'
+}
+
+// disabled checkbox of a view-only message, with a tooltip explaining why
+const NotSelectableCell: React.FunctionComponent<{ rowIndex: number, status: string }> = ({ rowIndex, status }) => {
+  const cellRef = useRef<HTMLTableCellElement>(null)
+  return (
+    <>
+      <Td innerRef={cellRef} select={{ rowIndex, isSelected: false, isDisabled: true }} />
+      <Tooltip content={NOT_SELECTABLE_MESSAGES[status] ?? 'Cannot select this message'} triggerRef={cellRef} />
+    </>
+  )
+}
+
 export const MessagesTable: React.FunctionComponent<MessageTableProps> = props => {
 
   const navigate = useNavigate()
@@ -167,10 +202,11 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
     if (props.selectMessage) {
       props.selectMessage(row as Message)
       if (!props.noNavigate) {
-        navigate({ pathname: `${artemisPluginPath}/queues/message/details`, search })
+        const detailsPath = props.onlyStatus ? `${MESSAGE_LIST_PATHS[props.onlyStatus]}/details` : 'message/details'
+        navigate({ pathname: `${artemisPluginPath}/queues/${detailsPath}`, search })
       }
     }
-  }, [props.selectMessage])
+  }, [props.selectMessage, props.onlyStatus])
 
   // These columns are not based on any ActiveMQAbstractView. They directly relate to
   // javax.management.openmbean.CompositeData[] returned from org.apache.activemq.artemis.api.core.management.QueueControl#browse()
@@ -187,6 +223,10 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
   //  + persistentSize: long
   //  + userID: string
   //  + protocol: string
+  //  ~ status: string (added by artemisService.getMessages(), messages in delivery and scheduled messages come from
+  //    QueueControl#listDeliveringMessagesAsJSON() and #listScheduledMessagesAsJSON() and have fewer fields,
+  //    without the body)
+  //  ~ connectionID, sessionID: string (messages in delivery only, parsed from the consumer holding the message)
   //  - PropertiesText: string
   //  - StringProperties: [string]
   //  - BooleanProperties: [boolean]
@@ -200,6 +240,7 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
   //  - BodyPreview: [byte] (for non-text messages)
   const allColumns: TableColumn[] = useMemo(() => [
     { id: 'messageID', type: ColumnType.STRING, name: 'Message ID', visible: true, sortable: true, filterable: true, link: messageView },
+    { id: 'status', type: ColumnType.STRING, name: 'Status', visible: true, sortable: false, filterable: false },
     { id: 'type', type: ColumnType.STRING, name: 'Type', visible: true, sortable: true, filterable: true },
     { id: 'durable', type: ColumnType.STRING, name: 'Durable', visible: true, sortable: true, filterable: true },
     { id: 'priority', type: ColumnType.NUMBER, name: 'Priority', visible: true, sortable: true, filterable: true },
@@ -210,6 +251,8 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
     { id: 'persistentSize', type: ColumnType.NUMBER, name: 'Persistent Size', visible: true, sortable: true, filterable: true },
     { id: 'userID', type: ColumnType.STRING, name: 'User ID', visible: false, sortable: true, filterable: false },
     { id: 'protocol', type: ColumnType.STRING, name: 'Protocol', visible: false, sortable: false, filterable: false },
+    { id: 'connectionID', type: ColumnType.STRING, name: 'Connection ID', visible: false, sortable: false, filterable: false },
+    { id: 'sessionID', type: ColumnType.STRING, name: 'Session ID', visible: false, sortable: false, filterable: false },
     // these 2 are not available on Artemis 2.57.0
     // { id: 'validatedUser', type: ColumnType.STRING, name: 'Validated User', visible: false, sortable: true, filterable: false },
     // { id: 'originalQueue', type: ColumnType.STRING, name: 'Original Queue', visible: false, sortable: true, filterable: false },
@@ -234,6 +277,13 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
   const [resendMessage, setResendMessage] = useState<Message | undefined>()
   const [showHelpModal, setShowHelpModal] = useState(false)
   const [refreshCount, setRefreshCount] = useState(0)
+  // which messages, not returned by browse(), are shown
+  const [browseDelivering, setBrowseDelivering] = useState(artemisPreferencesService.loadArtemisPreferences().artemisBrowseDeliveringMessages)
+  const [browseScheduled, setBrowseScheduled] = useState(artemisPreferencesService.loadArtemisPreferences().artemisBrowseScheduledMessages)
+  const [preferencesModalOpen, setPreferencesModalOpen] = useState(false)
+  // values edited in the preferences modal, applied on save
+  const [editedBrowseDelivering, setEditedBrowseDelivering] = useState(browseDelivering)
+  const [editedBrowseScheduled, setEditedBrowseScheduled] = useState(browseScheduled)
 
   const { brokerNode } = useContext(ArtemisContext)
 
@@ -253,7 +303,10 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
       if (props.queue) {
         const brokerObjectName = await artemisService.getBrokerObjectName()
         const queueMBean: string = createQueueObjectName(brokerObjectName, props.queue.address, props.queue.routingType, props.queue.name)
-        return await artemisService.getMessages(queueMBean, page, perPage, filter)
+        if (props.onlyStatus) {
+          return await artemisService.getMessagesWithStatus(queueMBean, props.onlyStatus, page, perPage, filter)
+        }
+        return await artemisService.getMessages(queueMBean, page, perPage, filter, browseDelivering, browseScheduled)
       }
     }
     setPerPage(artemisPreferencesService.loadTablePageSize(columnStorage.messages))
@@ -267,7 +320,7 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
     return () => {
       apply = false
     }
-  }, [props.queue, page, perPage, filter, selectedMessages, refreshCount])
+  }, [props.queue, props.onlyStatus, page, perPage, filter, selectedMessages, refreshCount, browseDelivering, browseScheduled])
 
   if (!props.queue) {
     // React-component-style redirect to one level up - no need to handle the case where this message
@@ -292,6 +345,24 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
     setColumnsModalOpen(!columnsModalOpen)
   }
 
+  const openPreferencesModal = () => {
+    setEditedBrowseDelivering(browseDelivering)
+    setEditedBrowseScheduled(browseScheduled)
+    setPreferencesModalOpen(true)
+  }
+
+  const savePreferences = () => {
+    artemisPreferencesService.saveArtemisPreferences({
+      artemisBrowseDeliveringMessages: editedBrowseDelivering,
+      artemisBrowseScheduledMessages: editedBrowseScheduled
+    })
+    setBrowseDelivering(editedBrowseDelivering)
+    setBrowseScheduled(editedBrowseScheduled)
+    setPage(1)
+    setSelectedMessages([])
+    setPreferencesModalOpen(false)
+  }
+
   const onSearchTextChange = (newValue: string) => {
     setInputValue(newValue)
   }
@@ -302,6 +373,18 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
   }
 
   const getRowActions = (row: TableRow): IAction[] => {
+    if (isViewOnly(row)) {
+      // messages held by consumers and scheduled messages can only be viewed
+      return [
+        {
+          title: 'View',
+          id: 'message-dropdown-view',
+          onClick: () => {
+            messageView(row)
+          }
+        }
+      ]
+    }
     return [
       {
         title: 'Delete',
@@ -377,6 +460,9 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
   }, [selectedMessages])
 
   const doesCopyMessageMethodExist = artemisService.doesMethodExist(brokerNode, props.queue.name, "copyMessage")
+  // only browse() can filter all messages, the lists of messages in delivery and scheduled messages can be
+  // filtered only by brokers that support it
+  const canFilter = !props.onlyStatus || artemisService.canFilterMessages(brokerNode, props.queue.name, props.onlyStatus)
 
   let isDLQ
   let isExpiry
@@ -394,9 +480,12 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
     log.warn("Copy button method not available in this version of Artemis")
   }
 
+  // only waiting messages can be selected
+  const selectableRows = rows.filter(row => !isViewOnly(row))
+
   const selectAllMessages = (isSelecting: boolean) => {
     if (isSelecting) {
-      const updatedSelectedMessages: number[] = rows.map((row: TableRow, _index) => {
+      const updatedSelectedMessages: number[] = selectableRows.map((row: TableRow, _index) => {
         return Number(row.messageID)
       })
       setSelectedMessages(updatedSelectedMessages)
@@ -405,7 +494,7 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
     }
   }
 
-  const areAllMessagesSelected = rows.length !== 0 && selectedMessages.length === rows.length
+  const areAllMessagesSelected = selectableRows.length !== 0 && selectedMessages.length === selectableRows.length
 
   const handleDeleteMessages = () => {
     const isRejected = <T,>(p: PromiseSettledResult<T>): p is PromiseRejectedResult => p.status === 'rejected'
@@ -523,7 +612,7 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
     <>
       {props.showTitle && <Flex direction={{ default: 'row' }} justifyContent={{ default: 'justifyContentSpaceBetween' }}>
         <FlexItem>
-          <Title headingLevel='h2'>Browsing {props.queue.name + ' '} <Icon status="info"><HelpIcon onClick={() => setShowHelpModal(true)}/></Icon></Title>
+          <Title headingLevel='h2'>Browsing {props.onlyStatus ? `${props.onlyStatus.toLowerCase()} messages of ` : ''}{props.queue.name + ' '} <Icon status="info"><HelpIcon onClick={() => setShowHelpModal(true)}/></Icon></Title>
         </FlexItem>
         {props.showBackToQueues && <FlexItem>
           <Button variant='link' onClick={() => {
@@ -535,6 +624,7 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
       </Flex>}
       <Toolbar id='artemis-tabs-toolbar'>
         <ToolbarContent>
+          {canFilter && <>
           <ToolbarItem>
             <SearchInput
               aria-label="With filters example search input"
@@ -554,6 +644,7 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
           <ToolbarItem>
             <Button onClick={applyFilter} size='sm'>Filter</Button>
           </ToolbarItem>
+          </>}
           <ToolbarItem>
             <Button isDisabled={selectedMessages.length === 0} size='sm' onClick={() => setShowDeleteMessagesModal(true)}>Delete</Button>
           </ToolbarItem>
@@ -572,6 +663,9 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
           <ToolbarItem>
             <Button variant='link' onClick={handleColumnsModalToggle}>Manage Columns</Button>
           </ToolbarItem>
+          {!props.onlyStatus && <ToolbarItem>
+            <Button variant='link' onClick={openPreferencesModal}>Preferences</Button>
+          </ToolbarItem>}
         </ToolbarContent>
       </Toolbar>
 
@@ -598,13 +692,13 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
           <Tbody>
             {rows.map((row, rowIndex) => (
               <Tr key={rowIndex}>
-                <Td
+                {isViewOnly(row) ? <NotSelectableCell rowIndex={rowIndex} status={(row as TableRow).status} /> : <Td
                   select={{
                     rowIndex,
                     onSelect: (_event, isSelecting) => onSelectMessage(Number(artemisService.getKeyByValue(row, "messageID")), rowIndex, isSelecting),
                     isSelected: isMessageSelected(Number(artemisService.getKeyByValue(row, "messageID")))
                   }}
-                />
+                />}
                 {columns.map((column, id) => {
                   if (column.visible) {
                     const text = artemisService.getKeyByValue(row, column.id)
@@ -779,6 +873,34 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
             Save
           </Button>
           <Button key="close" variant="link" onClick={handleColumnsModalToggle}>
+            Cancel
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      <Modal isOpen={preferencesModalOpen} variant='small' onClose={() => setPreferencesModalOpen(false)}
+             onKeyDown={closeWithEscape(setPreferencesModalOpen)}>
+        <ModalHeader>
+          <Title headingLevel='h2' size='lg'>Preferences</Title>
+          <Content>Messages which are not waiting in the queue, shown after the waiting messages when no filter is applied.</Content>
+        </ModalHeader>
+        <ModalBody>
+          <Flex direction={{ default: 'column' }} spaceItems={{ default: 'spaceItemsMd' }}>
+            <FlexItem>
+              <Switch id='browse-delivering-messages' label='Show messages in delivery'
+                      isChecked={editedBrowseDelivering} onChange={(_event, checked) => setEditedBrowseDelivering(checked)} />
+            </FlexItem>
+            <FlexItem>
+              <Switch id='browse-scheduled-messages' label='Show scheduled messages'
+                      isChecked={editedBrowseScheduled} onChange={(_event, checked) => setEditedBrowseScheduled(checked)} />
+            </FlexItem>
+          </Flex>
+        </ModalBody>
+        <ModalFooter>
+          <Button key='save' variant='primary' onClick={savePreferences}>
+            Save
+          </Button>
+          <Button key='close' variant='link' onClick={() => setPreferencesModalOpen(false)}>
             Cancel
           </Button>
         </ModalFooter>

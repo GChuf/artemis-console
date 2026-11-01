@@ -32,7 +32,7 @@ import { useLocation, useNavigate } from 'react-router'
 
 import { Attributes, eventService, jolokiaService, Operations } from '@hawtio/react'
 
-import { artemisService, Queue } from '../artemis-service'
+import { artemisService, MESSAGE_STATUS_DELIVERING, MESSAGE_STATUS_SCHEDULED, Queue } from '../artemis-service'
 import { columnStorage } from '../artemis-preferences-service'
 import { artemisJMXPluginPath, artemisPluginPath } from '../globals'
 import { ArtemisContext } from '../context'
@@ -48,6 +48,7 @@ import {
 import { closeWithEscape, loadFilteredData } from '../table/utils'
 import { ArtemisTable, type ArtemisTableFilterProps } from '../table/ArtemisTable'
 import { SendMessage } from '../messages/SendMessage'
+import { MESSAGE_LIST_PATHS } from '../messages/MessagesTable'
 
 /**
  * Extension of the `ArtemisTableFilterProps` properties for Artemis tabs with `selectQueue`
@@ -101,6 +102,14 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     navigate({ pathname: `${artemisPluginPath}/queues/delivering`, search })
   }, [props.selectQueue])
 
+  // a function to show a list of messages with a given status, using the same view as messageView
+  const messageWithStatusView = useCallback((row: TableRow, status: string) => {
+    props.selectQueue({ name: row.name, address: row.address, routingType: row.routingType })
+    navigate({ pathname: `${artemisPluginPath}/queues/${MESSAGE_LIST_PATHS[status]}`, search })
+  }, [props.selectQueue])
+  const inDeliveryView = useCallback((row: TableRow) => messageWithStatusView(row, MESSAGE_STATUS_DELIVERING), [messageWithStatusView])
+  const scheduledView = useCallback((row: TableRow) => messageWithStatusView(row, MESSAGE_STATUS_SCHEDULED), [messageWithStatusView])
+
   // for queues, all the values come (from the broker in JSON) as Strings, but lots of these are numbers and booleans
   // Note: for <QueuesTable> allColumns can't be defined at module level, because of the link property which uses
   // `props.selectQueue`
@@ -129,7 +138,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     { id: 'exclusive', type: ColumnType.BOOLEAN, name: 'Exclusive', visible: false, sortable: true, filterable: true },
     { id: 'lastValue', type: ColumnType.BOOLEAN, name: 'Last Value', visible: false, sortable: true, filterable: true },
     { id: 'lastValueKey', type: ColumnType.STRING, name: 'Last Value Key', visible: false, sortable: true, filterable: true },
-    { id: 'scheduledCount', type: ColumnType.NUMBER, name: 'Scheduled Count', visible: false, sortable: true, filterable: true },
+    { id: 'scheduledCount', type: ColumnType.NUMBER, name: 'Scheduled Count', visible: false, sortable: true, filterable: true, link: scheduledView },
     { id: 'groupRebalance', type: ColumnType.BOOLEAN, name: 'Group Rebalance', visible: false, sortable: true, filterable: true },
     { id: 'groupRebalancePauseDispatch', type: ColumnType.BOOLEAN, name: 'Group Rebalance Pause Dispatch', visible: false, sortable: true, filterable: true },
     { id: 'groupBuckets', type: ColumnType.NUMBER, name: 'Group Buckets', visible: false, sortable: true, filterable: true },
@@ -287,7 +296,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
   const browseDeliveringAction = (row: TableRow): IAction => ({
     title: "Browse Messages In Delivery",
     onClick: () => {
-      deliveringView(row)
+      inDeliveryView(row)
     }
   })
 
