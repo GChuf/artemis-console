@@ -95,7 +95,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     navigate({ pathname: `${artemisPluginPath}/queues/messages`, search })
   }, [props.selectQueue])
 
-  // a function to show a list of messages dispatched to consumers of a queue, but not yet acknowledged
+  // a function to show a list of messages in delivery
   const deliveringView: (row: TableRow) => void = useCallback(row => {
     props.selectQueue({ name: row.name, address: row.address, routingType: row.routingType })
     navigate({ pathname: `${artemisPluginPath}/queues/delivering`, search })
@@ -140,7 +140,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     { id: 'delayBeforeDispatch', type: ColumnType.NUMBER, name: 'Delay Before Dispatch', visible: false, sortable: true, filterable: true },
     { id: 'autoDelete', type: ColumnType.BOOLEAN, name: 'Auto Delete', visible: false, sortable: true, filterable: true },
     { id: 'internalQueue', type: ColumnType.BOOLEAN, name: 'Internal', visible: false, sortable: true, filterable: true }
-  ], [messageView, deliveringView])
+  ], [messageView])
 
   const listQueues = useCallback(async (page: number, perPage: number, sort: ActiveSort | undefined, filters: Filter[]): Promise<any> => {
     return loadFilteredData('queues', artemisService.getQueues.bind(artemisService), page, perPage, sort, filters, initialFilter)
@@ -285,7 +285,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
   })
 
   const browseDeliveringAction = (row: TableRow): IAction => ({
-    title: "Browse Delivering Messages",
+    title: "Browse Messages In Delivery",
     onClick: () => {
       deliveringView(row)
     }

@@ -26,7 +26,7 @@ import type { ArtemisTableFilterProps } from '../table/ArtemisTable'
 
 // Queues View is more sophisticated than other "Artemis Tabs", because it's not just a list of queues. This view
 // also presents list of messages for a queue and finally a particular message details.
-// This complexity makes this component another routes collection (queues, messages, details, delivering messages)
+// This complexity makes this component another routes collection (queues, messages, details)
 export const QueuesView: React.FunctionComponent<ArtemisTableFilterProps> = props => {
 
   // state used for sub-routes for the messages of the queue ...
