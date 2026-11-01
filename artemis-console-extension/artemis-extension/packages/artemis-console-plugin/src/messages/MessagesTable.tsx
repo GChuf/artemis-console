@@ -185,7 +185,7 @@ const NotSelectableCell: React.FunctionComponent<{ rowIndex: number, status: str
   const cellRef = useRef<HTMLTableCellElement>(null)
   return (
     <>
-      <Td innerRef={cellRef} select={{ rowIndex, isSelected: false, isDisabled: true }} />
+      <Td ref={cellRef} select={{ rowIndex, isSelected: false, isDisabled: true }} />
       <Tooltip content={NOT_SELECTABLE_MESSAGES[status] ?? 'Cannot select this message'} triggerRef={cellRef} />
     </>
   )
