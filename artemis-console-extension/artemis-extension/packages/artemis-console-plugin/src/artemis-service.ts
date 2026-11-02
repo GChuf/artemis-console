@@ -577,17 +577,17 @@ class ArtemisService {
     async getMessages(mBean: string, page: number, perPage: number, filter: string) {
         let count: number;
         if (filter && filter.length > 0) {
-            count = await jolokiaService.execute(mBean, COUNT_MESSAGES_SIG2, [filter]).catch(error => {
+            count = await jolokiaService.execute(mBean, COUNT_MESSAGES_SIG2, [filter], this.readOptions()).catch(error => {
                 eventService.notify({ type: "warning", message: jolokiaService.errorMessage(error) })
                 return 0
             }) as number;
         } else {
-            count = await jolokiaService.execute(mBean, COUNT_MESSAGES_SIG).catch(error => {
+            count = await jolokiaService.execute(mBean, COUNT_MESSAGES_SIG, [], this.readOptions()).catch(error => {
                 eventService.notify({ type: "warning", message: jolokiaService.errorMessage(error) })
                 return 0
             }) as number;
         }
-        const messages = await jolokiaService.execute(mBean, BROWSE_SIG, [page, perPage, filter]).catch(error => {
+        const messages = await jolokiaService.execute(mBean, BROWSE_SIG, [page, perPage, filter], this.readOptions()).catch(error => {
             eventService.notify({ type: "warning", message: jolokiaService.errorMessage(error) })
             return []
         }) as string;
@@ -703,8 +703,17 @@ class ArtemisService {
     private async list(signature: string, dataSignature: string, args: unknown[]): Promise<TableRowsData> {
         const brokerObjectName = await this.getBrokerObjectName();
         const brokerMBean = await findMBeanInfo(brokerObjectName).catch(() => null);
-        const result = await jolokiaService.execute(brokerObjectName, this.listSignature(brokerMBean ?? undefined, signature, dataSignature), args);
+        const result = await jolokiaService.execute(brokerObjectName, this.listSignature(brokerMBean ?? undefined, signature, dataSignature), args, this.readOptions());
         return typeof result === "string" ? JSON.parse(result) : result as TableRowsData;
+    }
+
+    /**
+     * Request options for reading table data. The console doesn't use the request which Jolokia echoes in the
+     * response by default, so leave it out. Every call needs a new object, because `jolokiaService.execute()` adds
+     * its own callbacks to the options.
+     */
+    private readOptions() {
+        return { includeRequest: false };
     }
 
     /**
