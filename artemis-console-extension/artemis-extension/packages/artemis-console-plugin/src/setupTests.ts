@@ -91,7 +91,7 @@ fetchMock.mockResponse(async req => {
             status: 200,
             request: body,
             value: JSON.stringify({
-              data: ['DLQ'],
+              data: [{ id: '1', name: 'DLQ' }],
               count: 1
             })
           }

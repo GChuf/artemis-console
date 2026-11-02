@@ -72,7 +72,7 @@ const allColumns: TableColumn[] = [
   { id: 'msgSizeSent', type: ColumnType.NUMBER, name: 'Messages Sent Size', visible: false, sortable: true, filterable: false },
   { id: 'lastProducedMessageID', type: ColumnType.STRING, name: 'Last Produced Message ID', visible: false, sortable: true, filterable: false },
   // actually a string value of the timestamp
-  { id: 'creationTime', type: ColumnType.NUMBER, name: 'Creation Time', visible: true, sortable: true, filterable: false }
+  { id: 'creationTime', type: ColumnType.NUMBER, name: 'Creation Time', visible: true, sortable: true, filterable: false, component: artemisService.formatTime }
 ]
 
 const initialFilter: Filter = { tab: 'producers', column: allColumns[1].id, operation: 'CONTAINS', input: '' }

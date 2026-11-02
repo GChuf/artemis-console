@@ -67,7 +67,7 @@ const allColumns: TableColumn[] = [
   // there's no 'session' field...
   // { id: 'session', type: ColumnType.STRING, name: 'Session ID', visible: true, sortable: true, filterable: false },
   // string, because it's java.util.Date.toString()
-  { id: 'creationTime', type: ColumnType.STRING, name: 'Creation Time', visible: true, sortable: true, filterable: false }
+  { id: 'creationTime', type: ColumnType.STRING, name: 'Creation Time', visible: true, sortable: true, filterable: false, component: artemisService.formatTime }
   // could also add (2.57.0): implementation, proxyAddress, proxyProtocolVersion
 ]
 

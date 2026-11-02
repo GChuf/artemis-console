@@ -71,20 +71,13 @@ export const QueueSelectInput: React.FunctionComponent<QueueSelectInputProps> = 
       const response = await artemisService.getQueues(1, 10, activeSort, filterValue)
           .catch(error => {
             eventService.notify({ type: 'warning', message: jolokiaService.errorMessage(error) })
-            return JSON.stringify({ data: [], count: 0 })
+            return { data: [], count: 0 }
           })
       let found = false
-      try {
-        const json = JSON.parse(response)
-        if ('data' in json) {
-          const queues = json.data
-          if (Array.isArray(queues) && queues.length > 0) {
-            setQueues(queues.map(q => ({ ...q, value: q.name, children: q.name })))
-            found = true
-          }
-        }
-      } catch (e) {
-        eventService.notify({ type: 'warning', message: e?.toString() ?? 'Error parsing response JSON' })
+      const queues = response.data
+      if (Array.isArray(queues) && queues.length > 0) {
+        setQueues(queues.map(q => ({ ...q, value: q.name, children: q.name })))
+        found = true
       }
       if (!found) {
         setQueues([{ name: NO_QUEUE_FOUND, value: NO_QUEUE_FOUND, children: NO_QUEUE_FOUND }])

@@ -90,7 +90,7 @@ const allColumns: TableColumn[] = [
   { id: 'remoteAddress', type: ColumnType.STRING, name: 'Remote Address', visible: true, sortable: true, filterable: true },
   { id: 'localAddress', type: ColumnType.STRING, name: 'Local Address', visible: true, sortable: true, filterable: true },
   // string, because it's java.util.Date.toString()
-  { id: 'creationTime', type: ColumnType.STRING, name: 'Creation Time', visible: true, sortable: true, filterable: false },
+  { id: 'creationTime', type: ColumnType.STRING, name: 'Creation Time', visible: true, sortable: true, filterable: false, component: artemisService.formatTime },
   // Integer.toString()
   { id: 'messagesInTransit', type: ColumnType.NUMBER, name: 'Messages in Transit', visible: false, sortable: true, filterable: true },
   // Long.toString()
@@ -146,7 +146,7 @@ export const ConsumerTable: React.FunctionComponent<ArtemisTableFilterProps> = p
         title: 'Close',
         onClick: () => {
           console.log(`Clicked on Some action, on row delete ${row.id}`)
-          setConsumerToClose(row.id)
+          setConsumerToClose(String(row.id))
           setConsumerSession(row.session)
           setShowConsumerCloseDialog(true)
         }

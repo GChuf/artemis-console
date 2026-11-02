@@ -25,7 +25,7 @@ import { operationOptions } from './constants'
  * Type of the loader function used by functions from artemisService
  */
 type LoaderFunction = (page: number, perPage: number, sort: ActiveSort | undefined, filter: Filter | Filter[], defaultFilter?: Filter)
-    => Promise<string>
+    => Promise<TableRowsData>
 
 /**
  * Generic loader method for all the tabs (connections, sessions, ...)
@@ -44,16 +44,24 @@ export async function loadFilteredData(tab: ArtemisTabId, loaderFunction: Loader
   if (tabFilters.length == 1) {
     tabFilters = tabFilters[0]
   }
-  const response = await loaderFunction(page, perPage, sort, tabFilters, defaultFilter).catch(error => {
+  return loaderFunction(page, perPage, sort, tabFilters, defaultFilter).catch(error => {
     eventService.notify({ type: "warning", message: jolokiaService.errorMessage(error) })
-    return JSON.stringify({ data: [], count: 0 })
-  })
-  try {
-    return JSON.parse(response)
-  } catch (e) {
-    eventService.notify({ type: "warning", message: e?.toString() ?? 'Error parsing response JSON' })
     return { data: [], count: 0 }
+  })
+}
+
+/**
+ * Converts the value of a field for display. Brokers which return structured data return booleans, arrays and nulls,
+ * which React doesn't render as text.
+ */
+export function formatValue(value: unknown): string {
+  if (value === null || value === undefined) {
+    return ''
   }
+  if (Array.isArray(value)) {
+    return value.join(', ')
+  }
+  return String(value)
 }
 
 export function operationSymbol(operation: FilterOperation): string {

@@ -14,7 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { ActiveSort, type Filter, type FilterOperation } from './table/types'
+import { ActiveSort, type Filter, type FilterOperation, type TableRowsData } from './table/types'
+import { formatValue } from './table/utils'
 import { eventService, jolokiaService, MBeanNode, parseMBeanName, workspace } from '@hawtio/react'
 import { createAddressObjectName, createQueueObjectName } from './util/jmx'
 import { log } from './globals'
@@ -214,6 +215,13 @@ const LIST_PRODUCERS_SIG = "listProducers(java.lang.String,int,int)";
 const LIST_CONSUMERS_SIG = "listConsumers(java.lang.String,int,int)";
 const LIST_ADDRESSES_SIG = "listAddresses(java.lang.String,int,int)";
 const LIST_QUEUES_SIG = "listQueues(java.lang.String,int,int)";
+// variants of the list operations above which return structured data instead of a JSON string (see list())
+const LIST_CONNECTIONS_DATA_SIG = "listConnectionsAsData(java.lang.String,int,int)";
+const LIST_SESSIONS_DATA_SIG = "listSessionsAsData(java.lang.String,int,int)";
+const LIST_PRODUCERS_DATA_SIG = "listProducersAsData(java.lang.String,int,int)";
+const LIST_CONSUMERS_DATA_SIG = "listConsumersAsData(java.lang.String,int,int)";
+const LIST_ADDRESSES_DATA_SIG = "listAddressesAsData(java.lang.String,int,int)";
+const LIST_QUEUES_DATA_SIG = "listQueuesAsData(java.lang.String,int,int)";
 
 const LIST_ALL_ADDRESSES_SIG = "listAddresses(java.lang.String)";
 const DESTROY_QUEUE_SIG = "destroyQueue(java.lang.String)";
@@ -402,11 +410,11 @@ class ArtemisService {
                 const max: number = maxAddresses < addresses.length ? maxAddresses: addresses.length;
                 addresses = addresses.slice(0, max);
                 for (const address of addresses) {
-                    const queuesJson: string = await this.getQueuesForAddress(address).catch(error => {
+                    const result: TableRowsData = await this.getQueuesForAddress(address).catch(error => {
                         eventService.notify({ type: "warning", message: jolokiaService.errorMessage(error) })
-                        return JSON.stringify({ data: [], count: 0 })
+                        return { data: [], count: 0 }
                     })
-                    const queues: Queue[] = JSON.parse(queuesJson).data;
+                    const queues = result.data as Queue[];
                     brokerTopology.addresses.push({
                         name: address,
                         queues: queues
@@ -630,34 +638,34 @@ class ArtemisService {
         return JSON.stringify(connectionsFilter)
     }
 
-    async getConnections(page: number, perPage: number, sort: ActiveSort | undefined, filter: Filter | Filter[], emptyFilter?: Filter): Promise<string> {
+    async getConnections(page: number, perPage: number, sort: ActiveSort | undefined, filter: Filter | Filter[], emptyFilter?: Filter): Promise<TableRowsData> {
         const filtering = this.filterParameter(filter, sort, emptyFilter)
-        return jolokiaService.execute(await this.getBrokerObjectName(), LIST_CONNECTIONS_SIG, [filtering, page, perPage]) as Promise<string>
+        return this.list(LIST_CONNECTIONS_SIG, LIST_CONNECTIONS_DATA_SIG, [filtering, page, perPage])
     }
 
-    async getSessions(page: number, perPage: number, sort: ActiveSort | undefined, filter: Filter | Filter[], emptyFilter?: Filter): Promise<string> {
+    async getSessions(page: number, perPage: number, sort: ActiveSort | undefined, filter: Filter | Filter[], emptyFilter?: Filter): Promise<TableRowsData> {
         const filtering = this.filterParameter(filter, sort, emptyFilter)
-        return await jolokiaService.execute(await this.getBrokerObjectName(), LIST_SESSIONS_SIG, [filtering, page, perPage]) as string;
+        return this.list(LIST_SESSIONS_SIG, LIST_SESSIONS_DATA_SIG, [filtering, page, perPage]);
     }
 
-    async getProducers(page: number, perPage: number, sort: ActiveSort | undefined, filter: Filter | Filter[], emptyFilter?: Filter): Promise<string> {
+    async getProducers(page: number, perPage: number, sort: ActiveSort | undefined, filter: Filter | Filter[], emptyFilter?: Filter): Promise<TableRowsData> {
         const filtering = this.filterParameter(filter, sort, emptyFilter)
-        return await jolokiaService.execute(await this.getBrokerObjectName(), LIST_PRODUCERS_SIG, [filtering, page, perPage]) as string;
+        return this.list(LIST_PRODUCERS_SIG, LIST_PRODUCERS_DATA_SIG, [filtering, page, perPage]);
     }
 
-    async getConsumers(page: number, perPage: number, sort: ActiveSort | undefined, filter: Filter | Filter[], emptyFilter?: Filter): Promise<string> {
+    async getConsumers(page: number, perPage: number, sort: ActiveSort | undefined, filter: Filter | Filter[], emptyFilter?: Filter): Promise<TableRowsData> {
         const filtering = this.filterParameter(filter, sort, emptyFilter)
-        return await jolokiaService.execute(await this.getBrokerObjectName(), LIST_CONSUMERS_SIG, [filtering, page, perPage]) as string;
+        return this.list(LIST_CONSUMERS_SIG, LIST_CONSUMERS_DATA_SIG, [filtering, page, perPage]);
     }
 
-    async getAddresses(page: number, perPage: number, sort: ActiveSort | undefined, filter: Filter | Filter[], emptyFilter?: Filter): Promise<string> {
+    async getAddresses(page: number, perPage: number, sort: ActiveSort | undefined, filter: Filter | Filter[], emptyFilter?: Filter): Promise<TableRowsData> {
         const filtering = this.filterParameter(filter, sort, emptyFilter)
-        return await jolokiaService.execute(await this.getBrokerObjectName(), LIST_ADDRESSES_SIG, [filtering, page, perPage]) as string;
+        return this.list(LIST_ADDRESSES_SIG, LIST_ADDRESSES_DATA_SIG, [filtering, page, perPage]);
     }
 
-    async getQueues(page: number, perPage: number, sort: ActiveSort | undefined, filter: Filter | Filter[], emptyFilter?: Filter): Promise<string> {
+    async getQueues(page: number, perPage: number, sort: ActiveSort | undefined, filter: Filter | Filter[], emptyFilter?: Filter): Promise<TableRowsData> {
         const filtering = this.filterParameter(filter, sort, emptyFilter)
-        return await jolokiaService.execute(await this.getBrokerObjectName(), LIST_QUEUES_SIG, [filtering, page, perPage]) as string;
+        return this.list(LIST_QUEUES_SIG, LIST_QUEUES_DATA_SIG, [filtering, page, perPage]);
     }
 
     async getAllAddresses(addressFilter: string): Promise<string[]> {     
@@ -679,13 +687,31 @@ class ArtemisService {
         });
     }
 
-    async getQueuesForAddress(address: string): Promise<string> {
+    async getQueuesForAddress(address: string): Promise<TableRowsData> {
         const queuesFilter = {
             field: 'address',
             operation: 'EQUALS',
             value: address
         };
-        return await jolokiaService.execute(await this.getBrokerObjectName(), LIST_QUEUES_SIG, [JSON.stringify(queuesFilter), 1, 1000]) as string;
+        return this.list(LIST_QUEUES_SIG, LIST_QUEUES_DATA_SIG, [JSON.stringify(queuesFilter), 1, 1000]);
+    }
+
+    /**
+     * Executes one of the paged list operations of the broker MBean. Brokers which provide the `...AsData` variant of
+     * the operation return the result as structured data, older brokers return it as a JSON string.
+     */
+    private async list(signature: string, dataSignature: string, args: unknown[]): Promise<TableRowsData> {
+        const brokerObjectName = await this.getBrokerObjectName();
+        const brokerMBean = await findMBeanInfo(brokerObjectName).catch(() => null);
+        const result = await jolokiaService.execute(brokerObjectName, this.listSignature(brokerMBean ?? undefined, signature, dataSignature), args);
+        return typeof result === "string" ? JSON.parse(result) : result as TableRowsData;
+    }
+
+    /**
+     * Returns `dataSignature` if the broker provides that operation, otherwise `signature`.
+     */
+    listSignature = (broker: MBeanNode | undefined, signature: string, dataSignature: string): string => {
+        return broker?.hasOperations?.(dataSignature.substring(0, dataSignature.indexOf("("))) ? dataSignature : signature;
     }
 
     async deleteQueue(name: string) {
@@ -801,6 +827,14 @@ class ArtemisService {
         // "yyyy-MM-dd HH:mm:ss"
         //add 1 to month as getmonth returns the position not the actual month
         return d.getFullYear() + "-" + this.pad2(d.getMonth() + 1) + "-" + this.pad2(d.getDate()) + " " + this.pad2(d.getHours()) + ":" + this.pad2(d.getMinutes()) + ":" + this.pad2(d.getSeconds());
+    }
+
+    /**
+     * Formats a time returned by the list operations: brokers which return structured data return epoch milliseconds,
+     * older brokers return text.
+     */
+    formatTime = (value: unknown): string => {
+        return typeof value === "number" ? this.formatTimestamp(value) : formatValue(value);
     }
 
     pad2 = (value: number) => {
@@ -926,27 +960,27 @@ class ArtemisService {
     }
 
     canListConnections = (broker: MBeanNode | undefined): boolean => {
-        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(LIST_CONNECTIONS_SIG)) ?? false
+        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(this.listSignature(broker, LIST_CONNECTIONS_SIG, LIST_CONNECTIONS_DATA_SIG))) ?? false
     }
 
     canListSessions = (broker: MBeanNode | undefined): boolean => {
-        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(LIST_SESSIONS_SIG)) ?? false
+        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(this.listSignature(broker, LIST_SESSIONS_SIG, LIST_SESSIONS_DATA_SIG))) ?? false
     }
 
     canListConsumers = (broker: MBeanNode | undefined): boolean => {
-        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(LIST_CONSUMERS_SIG)) ?? false
+        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(this.listSignature(broker, LIST_CONSUMERS_SIG, LIST_CONSUMERS_DATA_SIG))) ?? false
     }
 
     canListProducers = (broker: MBeanNode | undefined): boolean => {
-        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(LIST_PRODUCERS_SIG)) ?? false
+        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(this.listSignature(broker, LIST_PRODUCERS_SIG, LIST_PRODUCERS_DATA_SIG))) ?? false
     }
 
     canListAddresses = (broker: MBeanNode | undefined): boolean => {
-        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(LIST_ADDRESSES_SIG)) ?? false
+        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(this.listSignature(broker, LIST_ADDRESSES_SIG, LIST_ADDRESSES_DATA_SIG))) ?? false
     }
 
     canListQueues = (broker: MBeanNode | undefined): boolean => {
-        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(LIST_QUEUES_SIG)) ?? false
+        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(this.listSignature(broker, LIST_QUEUES_SIG, LIST_QUEUES_DATA_SIG))) ?? false
     }
 
     canListNetworkTopology = (broker: MBeanNode | undefined): boolean => {

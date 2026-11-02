@@ -75,7 +75,7 @@ import {
 import { defaultRowsPerPage, pageSizeOptions } from './constants'
 import { artemisPreferencesService } from '../artemis-preferences-service'
 import { ArtemisFilters } from './ArtemisFilters'
-import { operationSymbol } from './utils'
+import { formatValue, operationSymbol } from './utils'
 
 /**
  * Definition of additional action (not specific to any particular row) to be added next to filter toolbar
@@ -319,7 +319,7 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
     if (column.component) {
       return column.component(v)
     }
-    return v
+    return formatValue(v)
   }
 
   const handleClick = (column: TableColumn, row: TableRow) => () => {

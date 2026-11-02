@@ -81,7 +81,7 @@ const allColumns: TableColumn[] = [
   { id: 'user', type: ColumnType.STRING, name: 'User', visible: true, sortable: true, filterable: true },
   { id: 'validatedUser', type: ColumnType.STRING, name: 'Validated User', visible: false, sortable: true, filterable: true },
   // string, because it's java.util.Date.toString()
-  { id: 'creationTime', type: ColumnType.STRING, name: 'Creation Time', visible: true, sortable: true, filterable: false }
+  { id: 'creationTime', type: ColumnType.STRING, name: 'Creation Time', visible: true, sortable: true, filterable: false, component: artemisService.formatTime }
 ]
 
 const initialFilter: Filter = { tab: 'sessions', column: allColumns[1].id, operation: 'CONTAINS', input: '' }

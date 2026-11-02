@@ -37,7 +37,7 @@ describe("Artemis Service basic tests", () => {
         1, 50,
         { column: "0", order: SortDirection.ASCENDING },
         { tab: 'addresses', column: "", operation: "CONTAINS", input: "" }
-    )
+    ).then(result => result.data.map(address => address.name))
     await expect(addresses).resolves.toContain("DLQ");
   })
 
@@ -135,6 +135,14 @@ describe("Artemis Service permission checks", () => {
 
   test("canListQueues returns true when broker has invoke rights", () => {
     const mockBroker = createMockBrokerNode((sig) => sig === "listQueues(java.lang.String,int,int)")
+    expect(artemisService.canListQueues(mockBroker)).toBe(true)
+  })
+
+  test("canListQueues checks the AsData operation when the broker provides it", () => {
+    const mockBroker = {
+      ...createMockBrokerNode((sig) => sig === "listQueuesAsData(java.lang.String,int,int)"),
+      hasOperations: (name: string) => name === "listQueuesAsData"
+    }
     expect(artemisService.canListQueues(mockBroker)).toBe(true)
   })
 
