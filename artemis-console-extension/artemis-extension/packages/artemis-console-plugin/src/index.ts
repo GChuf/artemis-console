@@ -50,7 +50,7 @@ export const artemis: HawtioPlugin = () => {
   //  - artemisJMX
   //  - artemisHeader
   hawtio.addDeferredPlugin('artemis-plugins', async () => {
-    return import('./plugin-ui').then(m => {
+    return import(/* webpackChunkName: "artemis-plugin-ui" */ './plugin-ui').then(m => {
       preferencesRegistry.add(artemisPluginName, artemisPluginTitle, m.ArtemisPreferences, 1)
 
       treeProcessorRegistry.add('artemis', artemisTreeProcessor)

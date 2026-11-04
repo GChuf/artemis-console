@@ -22,6 +22,6 @@ import './index.css'
 
 // create an async boundary point, so remaining part of the application is loaded from different chunks
 // See https://webpack.js.org/concepts/module-federation/#uncaught-error-shared-module-is-not-available-for-eager-consumption
-import('./bootstrap')
+import(/* webpackChunkName: "bootstrap" */ './bootstrap')
 
 export {}

@@ -33,6 +33,37 @@ const InvestigationPlugin = require("../plugins/investigation-webpack-plugin/plu
 
 const port = 8080
 
+/**
+ * Adds `<link rel="preload">` tags to index.html for the given (named) chunks. Without this, lazy chunks
+ * are requested one after another: the bootstrap chunk only when the entry runs, the Artemis plugin chunk
+ * only after `@hawtio/react` is loaded and the plugin UI chunk only during `hawtio.bootstrap()`.
+ * Preloading lets the browser download all of them in parallel with the initial chunks.
+ */
+class PreloadChunksPlugin {
+  constructor(chunkNames) {
+    this.chunkNames = chunkNames
+  }
+
+  apply(compiler) {
+    compiler.hooks.compilation.tap('PreloadChunksPlugin', compilation => {
+      HtmlWebpackPlugin.getHooks(compilation).alterAssetTagGroups.tap('PreloadChunksPlugin', data => {
+        for (const chunk of compilation.chunks) {
+          if (!this.chunkNames.includes(chunk.name)) {
+            continue
+          }
+          for (const file of chunk.files) {
+            const as = file.endsWith('.js') ? 'script' : file.endsWith('.css') ? 'style' : null
+            if (as) {
+              data.headTags.push(HtmlWebpackPlugin.createHtmlTagObject('link', { rel: 'preload', as, href: file }))
+            }
+          }
+        }
+        return data
+      })
+    })
+  }
+}
+
 module.exports = (webpackEnv, args) => {
   const isEnvDevelopment = args.mode === 'development';
   const isEnvProduction = args.mode === 'production';
@@ -66,6 +97,8 @@ module.exports = (webpackEnv, args) => {
           minifyURLs: true
         }
       } : undefined)),
+      // chunks needed before the UI is rendered, which would otherwise be loaded sequentially
+      new PreloadChunksPlugin(['react', 'other', 'bootstrap', 'artemis-plugin', 'artemis-plugin-ui']),
       new MiniCssExtractPlugin({
         // Options similar to the same options in webpackOptions.output
         // both options are optional
