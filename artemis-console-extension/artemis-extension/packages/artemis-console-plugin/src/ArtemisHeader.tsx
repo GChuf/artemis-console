@@ -16,9 +16,9 @@
  */
 import React, { useEffect, useCallback, useState } from 'react'
 import { Label, LabelStatus, Tooltip } from '@patternfly/react-core'
-import { DisconnectedIcon } from '@patternfly/react-icons/dist/esm/icons/disconnected-icon'
-import { InProgressIcon } from '@patternfly/react-icons/dist/esm/icons/in-progress-icon'
-import { RhUiCheckCircleFillIcon } from '@patternfly/react-icons/dist/esm/icons/rh-ui-check-circle-fill-icon'
+import { DisconnectedIcon } from '@patternfly/react-icons/dist/esm/icons/disconnected-icon.js'
+import { InProgressIcon } from '@patternfly/react-icons/dist/esm/icons/in-progress-icon.js'
+import { RhUiCheckCircleFillIcon } from '@patternfly/react-icons/dist/esm/icons/rh-ui-check-circle-fill-icon.js'
 
 import { eventService, jolokiaService } from '@hawtio/react'
 

@@ -26,8 +26,8 @@ import {
   Title,
 } from '@patternfly/react-core'
 import { type IAction } from '@patternfly/react-table'
-import { PlusIcon } from '@patternfly/react-icons/dist/esm/icons/plus-icon'
-import { Remove2Icon } from '@patternfly/react-icons/dist/esm/icons/remove2-icon'
+import { PlusIcon } from '@patternfly/react-icons/dist/esm/icons/plus-icon.js'
+import { Remove2Icon } from '@patternfly/react-icons/dist/esm/icons/remove2-icon.js'
 import { useNavigate } from 'react-router'
 
 import { Attributes, eventService, jolokiaService, Operations, workspace } from '@hawtio/react'

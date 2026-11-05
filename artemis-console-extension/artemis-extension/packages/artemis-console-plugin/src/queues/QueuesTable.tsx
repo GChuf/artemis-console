@@ -26,8 +26,8 @@ import {
   Title
 } from '@patternfly/react-core'
 import { type IAction } from '@patternfly/react-table'
-import { Remove2Icon } from '@patternfly/react-icons/dist/esm/icons/remove2-icon'
-import { RhUiCleanUpIcon } from '@patternfly/react-icons/dist/esm/icons/rh-ui-clean-up-icon'
+import { Remove2Icon } from '@patternfly/react-icons/dist/esm/icons/remove2-icon.js'
+import { RhUiCleanUpIcon } from '@patternfly/react-icons/dist/esm/icons/rh-ui-clean-up-icon.js'
 import { useLocation, useNavigate } from 'react-router'
 
 import { Attributes, eventService, jolokiaService, Operations } from '@hawtio/react'
