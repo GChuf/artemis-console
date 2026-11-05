@@ -73,6 +73,16 @@ type FilterInformationProps = {
   setShowHelpModal: (show: boolean) => void
 }
 
+const initialPerPage = () => {
+  if (columnStorage.messages) {
+    const savedPerPage = artemisPreferencesService.loadTablePageSize(
+      columnStorage.messages
+    );
+    return savedPerPage ?? 10;
+  }
+  return 10;
+}
+
 const FilterInformation: React.FunctionComponent<FilterInformationProps> = props => (
   <Modal id='filter-information' aria-label='filter-information'
          variant={ModalVariant.medium}
@@ -219,7 +229,7 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
   const [inputValue, setInputValue] = useState('')
   const [page, setPage] = useState(1)
   const [rows, setRows] = useState([])
-  const [perPage, setPerPage] = useState(10)
+  const [perPage, setPerPage] = useState(initialPerPage);
   const [columns, setColumns] = useState(allColumns)
   const [columnsLoaded, setColumnsLoaded] = useState(false)
   const [columnsModalOpen, setColumnsModalOpen] = useState(false)
