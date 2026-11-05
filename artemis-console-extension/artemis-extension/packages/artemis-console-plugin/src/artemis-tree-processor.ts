@@ -17,11 +17,11 @@
 
 import { MBeanNode, type MBeanTree, TreeProcessor } from '@hawtio/react'
 import { configManager } from './config-manager'
-import { FolderIcon } from '@patternfly/react-icons/dist/esm/icons/folder-icon'
-import { FolderOpenIcon } from '@patternfly/react-icons/dist/esm/icons/folder-open-icon'
-import { NetworkWiredIcon } from '@patternfly/react-icons/dist/esm/icons/network-wired-icon'
-import { ServerIcon } from '@patternfly/react-icons/dist/esm/icons/server-icon'
-import { StreamIcon } from '@patternfly/react-icons/dist/esm/icons/stream-icon'
+import { FolderIcon } from '@patternfly/react-icons/dist/esm/icons/folder-icon.js'
+import { FolderOpenIcon } from '@patternfly/react-icons/dist/esm/icons/folder-open-icon.js'
+import { NetworkWiredIcon } from '@patternfly/react-icons/dist/esm/icons/network-wired-icon.js'
+import { ServerIcon } from '@patternfly/react-icons/dist/esm/icons/server-icon.js'
+import { StreamIcon } from '@patternfly/react-icons/dist/esm/icons/stream-icon.js'
 import React from 'react'
 
 const icons = {

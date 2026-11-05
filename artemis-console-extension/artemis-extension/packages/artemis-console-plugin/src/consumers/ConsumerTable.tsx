@@ -26,7 +26,7 @@ import {
   ModalVariant
 } from '@patternfly/react-core'
 import { type IAction } from '@patternfly/react-table'
-import { RhUiInfrastructureIcon } from '@patternfly/react-icons/dist/esm/icons/rh-ui-infrastructure-icon'
+import { RhUiInfrastructureIcon } from '@patternfly/react-icons/dist/esm/icons/rh-ui-infrastructure-icon.js'
 
 import { eventService, jolokiaService } from '@hawtio/react'
 

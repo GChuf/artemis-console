@@ -8,9 +8,9 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "require": "./dist/index.js",
-      "default": "./dist/index.js"
+      "types": "./dist/index.d.mts",
+      "require": "./dist/index.mjs",
+      "default": "./dist/index.mjs"
     },
     "./styles": "./dist/index.css",
     "./dist/index.css": "./dist/index.css"
@@ -19,7 +19,7 @@
     "build": "tsup --clean && yarn replace-version",
     "typecheck": "tsc --build",
     "test": "jest",
-    "replace-version": "node ../../scripts/replace-version.mjs ./packages/artemis-console-plugin/dist/index.js"
+    "replace-version": "node ../../scripts/replace-version.mjs ./packages/artemis-console-plugin/dist/index.mjs"
   },
   "dependencies": {
     "react-split": "^2.0.14",

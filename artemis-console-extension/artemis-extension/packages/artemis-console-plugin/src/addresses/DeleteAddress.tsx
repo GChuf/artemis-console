@@ -30,7 +30,7 @@ import {
   PanelHeader,
   PanelFooter
 } from '@patternfly/react-core'
-import { OutlinedQuestionCircleIcon } from '@patternfly/react-icons/dist/esm/icons/outlined-question-circle-icon'
+import { OutlinedQuestionCircleIcon } from '@patternfly/react-icons/dist/esm/icons/outlined-question-circle-icon.js'
 
 import { eventService, jolokiaService, workspace } from '@hawtio/react'
 
