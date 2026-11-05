@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@hawtio/react": "2.4.0-pre.1",
-    "@monaco-editor/react": "^4.7.0",
     "@patternfly/patternfly": "^6.6.1",
     "@patternfly/react-charts": "^8.6.1",
     "@patternfly/react-code-editor": "^6.6.2",
@@ -24,7 +23,6 @@
     "@patternfly/react-topology": "^6.6.0",
     "artemis-console-plugin": "workspace:*",
     "d3": "^7.9.0",
-    "monaco-editor": "~0.56.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router": "^7.18.4"
@@ -39,7 +37,6 @@
     "css-minimizer-webpack-plugin": "^8.0.0",
     "html-webpack-plugin": "^5.6.8",
     "mini-css-extract-plugin": "^2.10.2",
-    "monaco-editor-webpack-plugin": "^7.1.1",
     "os-browserify": "^0.3.0",
     "path-browserify": "^1.0.1",
     "source-map-loader": "^5.0.0",
