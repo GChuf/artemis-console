@@ -48,10 +48,10 @@ import {
 import { InnerScrollContainer, Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table'
 import { ChartDonutUtilization, ChartDonutThreshold } from '@patternfly/react-charts/dist/js/victory'
 
-import { LockedIcon } from '@patternfly/react-icons/dist/esm/icons/locked-icon'
-import { EllipsisVIcon } from '@patternfly/react-icons/dist/esm/icons/ellipsis-v-icon'
-import { ExclamationCircleIcon } from '@patternfly/react-icons/dist/esm/icons/exclamation-circle-icon'
-import { OkIcon } from '@patternfly/react-icons/dist/esm/icons/ok-icon'
+import { LockedIcon } from '@patternfly/react-icons/dist/esm/icons/locked-icon.js'
+import { EllipsisVIcon } from '@patternfly/react-icons/dist/esm/icons/ellipsis-v-icon.js'
+import { ExclamationCircleIcon } from '@patternfly/react-icons/dist/esm/icons/exclamation-circle-icon.js'
+import { OkIcon } from '@patternfly/react-icons/dist/esm/icons/ok-icon.js'
 
 import { Attributes, eventService, jolokiaService, Operations } from '@hawtio/react'
 

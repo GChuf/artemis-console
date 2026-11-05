@@ -40,7 +40,7 @@ import {
   ModalBody
 } from '@patternfly/react-core'
 import { Thead, Tr, Th, Tbody, Td, Table, InnerScrollContainer } from '@patternfly/react-table'
-import { ArrowLeftIcon } from '@patternfly/react-icons/dist/esm/icons/arrow-left-icon'
+import { ArrowLeftIcon } from '@patternfly/react-icons/dist/esm/icons/arrow-left-icon.js'
 import { Navigate, useLocation, useNavigate } from 'react-router'
 
 import { artemisPluginPath, log } from '../globals'

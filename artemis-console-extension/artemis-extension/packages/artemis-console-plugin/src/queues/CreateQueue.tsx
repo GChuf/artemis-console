@@ -39,9 +39,9 @@ import {
   PanelMainBody,
   PanelFooter
 } from '@patternfly/react-core'
-import { TrashIcon } from '@patternfly/react-icons/dist/esm/icons/trash-icon'
-import { OutlinedQuestionCircleIcon } from '@patternfly/react-icons/dist/esm/icons/outlined-question-circle-icon'
-import { InfoCircleIcon } from '@patternfly/react-icons/dist/esm/icons/info-circle-icon'
+import { TrashIcon } from '@patternfly/react-icons/dist/esm/icons/trash-icon.js'
+import { OutlinedQuestionCircleIcon } from '@patternfly/react-icons/dist/esm/icons/outlined-question-circle-icon.js'
+import { InfoCircleIcon } from '@patternfly/react-icons/dist/esm/icons/info-circle-icon.js'
 
 import { eventService, jolokiaService, workspace } from '@hawtio/react'
 

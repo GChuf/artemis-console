@@ -43,8 +43,8 @@ import {
   PageSection
 } from '@patternfly/react-core'
 import { Thead, Tr, Th, Tbody, Td, ActionsColumn, IAction, Table, InnerScrollContainer } from '@patternfly/react-table'
-import { HelpIcon } from '@patternfly/react-icons/dist/esm/icons/help-icon'
-import { ArrowLeftIcon } from '@patternfly/react-icons/dist/esm/icons/arrow-left-icon'
+import { HelpIcon } from '@patternfly/react-icons/dist/esm/icons/help-icon.js'
+import { ArrowLeftIcon } from '@patternfly/react-icons/dist/esm/icons/arrow-left-icon.js'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router'
 
 import { eventService, jolokiaService } from '@hawtio/react'

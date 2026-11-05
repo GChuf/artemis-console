@@ -55,8 +55,8 @@ import {
   Thead,
   Tr
 } from '@patternfly/react-table'
-import { SortAmountDownIcon } from '@patternfly/react-icons/dist/esm/icons/sort-amount-down-icon'
-import { RhUiRefreshIcon } from '@patternfly/react-icons/dist/esm/icons/rh-ui-refresh-icon'
+import { SortAmountDownIcon } from '@patternfly/react-icons/dist/esm/icons/sort-amount-down-icon.js'
+import { RhUiRefreshIcon } from '@patternfly/react-icons/dist/esm/icons/rh-ui-refresh-icon.js'
 
 import { eventService, jolokiaService } from '@hawtio/react'
 

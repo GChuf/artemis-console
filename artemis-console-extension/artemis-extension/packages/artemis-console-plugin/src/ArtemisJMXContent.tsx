@@ -23,7 +23,7 @@ import {
   Content,
   EmptyState
 } from '@patternfly/react-core'
-import { CubesIcon } from '@patternfly/react-icons/dist/esm/icons/cubes-icon'
+import { CubesIcon } from '@patternfly/react-icons/dist/esm/icons/cubes-icon.js'
 
 import { ArtemisContext } from './context'
 import { ArtemisJMXTabs } from './views/ArtemisJMXTabView'

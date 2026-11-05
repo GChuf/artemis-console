@@ -19,7 +19,7 @@ import {
   Label,
   LabelStatus
 } from '@patternfly/react-core'
-import { RhUiInfrastructureIcon } from '@patternfly/react-icons/dist/esm/icons/rh-ui-infrastructure-icon'
+import { RhUiInfrastructureIcon } from '@patternfly/react-icons/dist/esm/icons/rh-ui-infrastructure-icon.js'
 
 import { artemisService } from '../artemis-service'
 import { columnStorage } from '../artemis-preferences-service'
