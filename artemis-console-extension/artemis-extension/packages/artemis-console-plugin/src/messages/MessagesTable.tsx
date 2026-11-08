@@ -67,10 +67,11 @@ import { createQueueObjectName } from '../util/jmx'
 import { QueueSelectInput } from './QueueSelect'
 import { SendMessage } from './SendMessage'
 import { Message } from './MessageView'
+import { createMessageNavigation, MessageNavigation, MessagesPage } from './message-navigation'
 
 export type MessageTableProps = {
   queue?: Queue
-  selectMessage?: (message: Message) => void
+  selectMessage?: (message: Message, navigation: MessageNavigation) => void
   showTitle?: boolean
   showBackToQueues?: boolean
   noNavigate?: boolean
@@ -201,16 +202,40 @@ const NotSelectableCell: React.FunctionComponent<{ rowIndex: number, status: str
   )
 }
 
+type MessageListQuery = {
+  queue: Queue
+  onlyStatus?: string
+  perPage: number
+  filter: string
+  browseDelivering: boolean
+  browseScheduled: boolean
+}
+
+const fetchMessagesPage = async (query: MessageListQuery, page: number): Promise<MessagesPage> => {
+  const brokerObjectName = await artemisService.getBrokerObjectName()
+  const queueMBean: string = createQueueObjectName(brokerObjectName, query.queue.address, query.queue.routingType, query.queue.name)
+  if (query.onlyStatus) {
+    return await artemisService.getMessagesWithStatus(queueMBean, query.onlyStatus, page, query.perPage, query.filter)
+  }
+  return await artemisService.getMessages(queueMBean, page, query.perPage, query.filter, query.browseDelivering, query.browseScheduled)
+}
+
 export const MessagesTable: React.FunctionComponent<MessageTableProps> = props => {
 
   const navigate = useNavigate()
   const { search } = useLocation()
 
+  // the state of the list as of the latest render. messageView can't use it directly, because the columns state
+  // keeps the instance of messageView from the first render
+  const currentList = useRef<{ query: MessageListQuery, page: number, rows: TableRow[], count: number }>(undefined)
+
   // a function that shows message details for one selected message
   const messageView = useCallback((row: TableRow) => {
     // TableRow is generic Record<string, any>, we can cast it to Message here
     if (props.selectMessage) {
-      props.selectMessage(row as Message)
+      const { query, page, rows, count } = currentList.current!
+      const index = (page - 1) * query.perPage + rows.indexOf(row)
+      props.selectMessage(row as Message, createMessageNavigation(p => fetchMessagesPage(query, p), query.perPage, { page, rows, count }, index))
       if (!props.noNavigate) {
         const detailsPath = props.onlyStatus ? `${MESSAGE_LIST_PATHS[props.onlyStatus]}/details` : 'message/details'
         navigate({ pathname: `${artemisPluginPath}/queues/${detailsPath}`, search })
@@ -271,7 +296,7 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
   const [filter, setFilter] = useState('')
   const [inputValue, setInputValue] = useState('')
   const [page, setPage] = useState(1)
-  const [rows, setRows] = useState([])
+  const [rows, setRows] = useState<TableRow[]>([])
   const [perPage, setPerPage] = useState(initialPerPage);
   const [columns, setColumns] = useState(allColumns)
   const [columnsLoaded, setColumnsLoaded] = useState(false)
@@ -311,12 +336,7 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
     }
     const listMessages = async (): Promise<any> => {
       if (props.queue) {
-        const brokerObjectName = await artemisService.getBrokerObjectName()
-        const queueMBean: string = createQueueObjectName(brokerObjectName, props.queue.address, props.queue.routingType, props.queue.name)
-        if (props.onlyStatus) {
-          return await artemisService.getMessagesWithStatus(queueMBean, props.onlyStatus, page, perPage, filter)
-        }
-        return await artemisService.getMessages(queueMBean, page, perPage, filter, browseDelivering, browseScheduled)
+        return await fetchMessagesPage({ queue: props.queue, onlyStatus: props.onlyStatus, perPage, filter, browseDelivering, browseScheduled }, page)
       }
     }
     setPerPage(artemisPreferencesService.loadTablePageSize(columnStorage.messages))
@@ -339,6 +359,13 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
   }
 
   const queue = props.queue!
+
+  currentList.current = {
+    query: { queue, onlyStatus: props.onlyStatus, perPage, filter, browseDelivering, browseScheduled },
+    page,
+    rows,
+    count: resultsSize
+  }
 
   const handleSetPage = (_event: React.MouseEvent | React.KeyboardEvent | MouseEvent, newPage: number) => {
     setPage(newPage)
@@ -684,6 +711,7 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
           <Thead>
             <Tr>
               <Th
+                aria-label='Select all'
                 select={{
                   onSelect: (_event, isSelecting) => selectAllMessages(isSelecting),
                   isSelected: areAllMessagesSelected

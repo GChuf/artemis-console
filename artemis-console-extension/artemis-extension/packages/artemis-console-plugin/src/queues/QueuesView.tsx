@@ -22,6 +22,7 @@ import { QueuesTable } from './QueuesTable'
 import { MESSAGE_LIST_PATHS, MessagesTable } from '../messages/MessagesTable'
 import { DeliveringMessagesTable } from '../messages/DeliveringMessagesTable'
 import { Message, MessageView } from '../messages/MessageView'
+import type { MessageNavigation } from '../messages/message-navigation'
 import type { ArtemisTableFilterProps } from '../table/ArtemisTable'
 
 // Queues View is more sophisticated than other "Artemis Tabs", because it's not just a list of queues. This view
@@ -33,22 +34,25 @@ export const QueuesView: React.FunctionComponent<ArtemisTableFilterProps> = prop
   const [currentQueue, setCurrentQueue] = useState<Queue>()
   // ... and for the details of particular message
   const [currentMessage, setCurrentMessage] = useState<Message>()
+  // ... and its position in the list of messages
+  const [currentNavigation, setCurrentNavigation] = useState<MessageNavigation>()
 
   const selectQueue = useCallback((queue: Queue) => {
     setCurrentQueue(queue)
   }, [])
 
-  const selectMessage = useCallback((message: Message) => {
+  const selectMessage = useCallback((message: Message, navigation: MessageNavigation) => {
     setCurrentMessage(message)
+    setCurrentNavigation(navigation)
   }, [])
 
   return (
       <Routes>
         <Route key='messages' path='messages' element={<MessagesTable queue={currentQueue} selectMessage={selectMessage} showTitle showBackToQueues />} />
-        <Route key='message-details' path='message/details' element={<MessageView queue={currentQueue} message={currentMessage} />} />
+        <Route key='message-details' path='message/details' element={<MessageView queue={currentQueue} message={currentMessage} navigation={currentNavigation} onNavigate={selectMessage} />} />
         {[MESSAGE_STATUS_DELIVERING, MESSAGE_STATUS_SCHEDULED].flatMap(status => [
           <Route key={status} path={MESSAGE_LIST_PATHS[status]} element={<MessagesTable queue={currentQueue} selectMessage={selectMessage} showTitle showBackToQueues onlyStatus={status} />} />,
-          <Route key={`${status}-details`} path={`${MESSAGE_LIST_PATHS[status]}/details`} element={<MessageView queue={currentQueue} message={currentMessage} messageListPath={MESSAGE_LIST_PATHS[status]} />} />
+          <Route key={`${status}-details`} path={`${MESSAGE_LIST_PATHS[status]}/details`} element={<MessageView queue={currentQueue} message={currentMessage} messageListPath={MESSAGE_LIST_PATHS[status]} navigation={currentNavigation} onNavigate={selectMessage} />} />
         ])}
         <Route key='delivering' path='delivering' element={<DeliveringMessagesTable queue={currentQueue} />} />
         <Route key='queues' path='' element={<QueuesTable switchTab={props.switchTab} filters={props.filters} selectQueue={selectQueue} editGlobalFilter={props.editGlobalFilter} />} />
