@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   Title,
   Divider,
@@ -45,6 +45,7 @@ import { Navigate, useLocation, useNavigate } from 'react-router'
 
 import { artemisPluginPath, log } from '../globals'
 import { artemisService, MESSAGE_STATUS_DELIVERING, MESSAGE_STATUS_SCHEDULED, Queue } from '../artemis-service'
+import type { MessageNavigation } from './message-navigation'
 
 export type MessageProps = {
   message?: Message,
@@ -53,6 +54,9 @@ export type MessageProps = {
   onClose?: () => void
   /** Path (under `queues/`) of the message list to go back to, `messages` by default */
   messageListPath?: string
+  /** Position of the message in the list it was opened from, enables moving to other messages of the list */
+  navigation?: MessageNavigation
+  onNavigate?: (message: Message, navigation: MessageNavigation) => void
 }
 
 export type Message = {
@@ -98,12 +102,18 @@ export const MessageView: React.FunctionComponent<MessageProps> = props => {
   const { search } = useLocation()
   const navigate = useNavigate()
   const messageListPath = props.messageListPath ?? 'messages'
+  // only the result of the latest move is applied
+  const latestMove = useRef(0)
 
   useEffect(() => {
     if (props.message) {
       updateBodyText(props.message)
     }
   }, [props.message])
+
+  useEffect(() => () => {
+    latestMove.current++
+  }, [])
 
   if (!props.message) {
     return <Navigate to={{ pathname: `${artemisPluginPath}/queues/${messageListPath}`, search }} replace />
@@ -112,6 +122,36 @@ export const MessageView: React.FunctionComponent<MessageProps> = props => {
   const currentMessage = props.message
   // queue can't be undefined when there's a message available
   const queue = props.queue!
+  const navigation = props.navigation
+
+  const moveTo = async (targetIndex: number) => {
+    if (!navigation || !props.onNavigate) {
+      return
+    }
+    const move = ++latestMove.current
+    let index = targetIndex
+    let result = await navigation.fetchMessageAt(index)
+    if (!result.message && result.totalCount <= 0) {
+      // failed call (or the queue was emptied), staying on the current message allows trying again
+      return
+    }
+    if (!result.message) {
+      // the list got shorter, so the last message is shown instead
+      const last = result.totalCount - 1
+      if (last < index && last !== navigation.index && move === latestMove.current) {
+        index = last
+        result = await navigation.fetchMessageAt(index)
+      }
+    }
+    if (move !== latestMove.current) {
+      return
+    }
+    if (result.message) {
+      props.onNavigate(result.message, { ...navigation, index, totalCount: result.totalCount })
+    } else {
+      props.onNavigate(currentMessage, { ...navigation, index: Math.min(navigation.index, result.totalCount - 1), totalCount: result.totalCount })
+    }
+  }
 
   const updateBodyText = (currentMessage: Message): void => {
     log.debug('loading message:', currentMessage)
@@ -335,10 +375,18 @@ export const MessageView: React.FunctionComponent<MessageProps> = props => {
           <Flex>
             <FlexItem>
               <Title headingLevel='h2'>Viewing Message on {queue.name}</Title>
-              <Title headingLevel="h4">Message ID: {currentMessage.messageID}</Title>
+              <Title headingLevel="h4">
+                Message ID: {currentMessage.messageID}{navigation && ` (${navigation.index + 1}/${navigation.totalCount})`}
+              </Title>
             </FlexItem>
           </Flex>
           <Flex align={{ default: 'alignRight' }}>
+            {navigation && <FlexItem>
+              <Button id='message-view-previous-button' variant='secondary' isDisabled={navigation.index <= 0}
+                      onClick={() => moveTo(navigation.index - 1)}>Previous</Button>{' '}
+              <Button id='message-view-next-button' variant='secondary' isDisabled={navigation.index >= navigation.totalCount - 1}
+                      onClick={() => moveTo(navigation.index + 1)}>Next</Button>
+            </FlexItem>}
             <FlexItem>
               <Button variant='link' onClick={() => {
                 navigate({ pathname: `${artemisPluginPath}/queues/${messageListPath}`, search })
