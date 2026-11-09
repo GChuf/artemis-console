@@ -202,6 +202,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
       })
   }, [])
 
+  const canDeleteQueue = artemisService.canDeleteQueue(brokerNode)
   const permissions = useMemo(() => artemisService.getQueuePermissions(brokerNode), [brokerNode])
 
   const getRowActions = useCallback((row: TableRow): IAction[] => {
@@ -256,7 +257,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
       }
     ]
 
-    if (rowPerms?.canSend || rowPerms?.canBrowse || rowPerms?.canPurge || rowPerms?.canDelete) {
+    if (rowPerms?.canSend || rowPerms?.canBrowse || rowPerms?.canPurge || canDeleteQueue) {
       actions.push({ isSeparator: true })
     }
 
@@ -290,7 +291,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
         }
       })
     }
-    if (rowPerms?.canDelete) {
+    if (canDeleteQueue) {
       actions.push({
         title: (<><Remove2Icon /> Delete</>),
         onClick: () => {
@@ -301,7 +302,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     }
 
     return actions
-  }, [routeNavigate, permissions])
+  }, [routeNavigate, permissions, canDeleteQueue])
 
   const reload = useCallback(() => {
     setRefreshCount(c => c + 1)

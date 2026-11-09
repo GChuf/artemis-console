@@ -152,7 +152,10 @@ export type queuePermissions = {
   canSend: boolean;
   canBrowse: boolean;
   canPurge: boolean;
-  canDelete: boolean;
+}
+
+export type addressPermissions = {
+  canSend: boolean;
 }
 
 export enum BrokerStatus {
@@ -205,6 +208,7 @@ const CREATE_ADDRESS_SIG = "createAddress(java.lang.String,java.lang.String)"
 const COUNT_MESSAGES_SIG = "countMessages()";
 const COUNT_MESSAGES_SIG2 = "countMessages(java.lang.String)";
 const BROWSE_SIG = "browse(int,int,java.lang.String)";
+
 
 /* Signatures of JMX methods on the broker MBean to fill main tabs of <ArtemisTabs> */
 
@@ -879,31 +883,42 @@ class ArtemisService {
     getQueuePermissions = (broker: MBeanNode | undefined): Record<string, queuePermissions> => {
         const queuePermissionsMap: Record<string, queuePermissions> = {};
 
-        if (broker?.parent) {
-
-            const collectQueues = (node: MBeanNode) => {
-                if (node.propertyList?.get("subcomponent") === "queues") {
+        const collectQueues = (node: MBeanNode) => {
+            if (node.propertyList?.get("subcomponent") === "queues") {
                 queuePermissionsMap[node.name] = {
                     canSend: node.hasInvokeRights(SEND_MESSAGE_SIG) ?? false,
                     canPurge: node.hasInvokeRights(REMOVE_ALL_MESSAGES_SIG) ?? false,
-                    canBrowse: node.hasInvokeRights(BROWSE_SIG) ?? false,
-                    canDelete: broker.hasInvokeRights(DESTROY_QUEUE_SIG) ?? false
+                    canBrowse: node.hasInvokeRights(BROWSE_SIG) ?? false
                 };
             }
 
-            // Recurse into children if they exist
-            if (node.children?.length) {
-                node.children.forEach(child => collectQueues(child));
-                }
-            };
+            node.children?.forEach(child => collectQueues(child));
+        };
 
-            collectQueues(broker.parent);
-            return queuePermissionsMap;
+        const addressesFolder = broker?.get('addresses', true);
+        if (addressesFolder) {
+            collectQueues(addressesFolder);
         }
+
         return queuePermissionsMap;
     };
 
-    checkCanBrowseQueue = (queueMBean: MBeanNode ): boolean => {
+    getAddressPermissions = (broker: MBeanNode | undefined): Record<string, addressPermissions> => {
+        const addressPermissionsMap: Record<string, addressPermissions> = {};
+
+        broker?.get('addresses', true)?.children?.forEach(node => {
+            // hasInvokeRights() returns true for a folder without an MBean, so such nodes have to be skipped
+            if (node.mbean) {
+                addressPermissionsMap[node.name] = {
+                    canSend: node.hasInvokeRights(SEND_MESSAGE_SIG) ?? false
+                };
+            }
+        });
+
+        return addressPermissionsMap;
+    };
+
+    checkCanBrowseQueue =(queueMBean: MBeanNode ): boolean => {
         return (this.DEBUG_PRIVS && queueMBean?.hasInvokeRights(BROWSE_SIG)) ?? false;
     }
 
