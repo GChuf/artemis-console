@@ -68,6 +68,7 @@ import {
   RemoveFilterScope,
   SortDirection,
   type TableColumn,
+  TableColumnState,
   TableFilters,
   type TableRow,
   type TableRowsData
@@ -152,6 +153,258 @@ export type ArtemisTableProps = ArtemisTableFilterProps & {
   storageColumnLocation?: string
 }
 
+type ArtemisTableToolbarProps = {
+  allColumns: TableColumn[],
+  setAllColumns: React.Dispatch<React.SetStateAction<TableColumn[]>>,
+  toolbarActions?: ToolbarAction[]
+  refresh?: () => void,
+  isSortDropdownOpen: boolean,
+  setIsSortDropdownOpen: React.Dispatch<React.SetStateAction<boolean>>,
+  activeSort: ActiveSort,
+  storageColumnLocation?: string,
+  displayFilter: Filter,
+  tabFilters: Filter[],
+  updateActiveSort: (id: string, order: SortDirection) => void,
+  applyFilter: (filter: Filter, remove?: RemoveFilterScope) => void
+}
+
+const ArtemisTableToolbar: React.FunctionComponent<ArtemisTableToolbarProps> = (
+    {
+      allColumns, setAllColumns,
+      toolbarActions, refresh,
+      isSortDropdownOpen, setIsSortDropdownOpen,
+      activeSort,
+      storageColumnLocation,
+      displayFilter,
+      tabFilters,
+      updateActiveSort,
+      applyFilter
+    }
+) => {
+
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [columnsVisibility, setColumnsVisibility] = useState<TableColumnState[]>(() => {
+    const visibility: TableColumnState[] = []
+    allColumns.forEach(c => {
+      visibility.push({ id: c.id, name: c.name, visible: c.visible })
+    })
+    return visibility
+  })
+
+  const visibleColumns = allColumns.filter((column) => column.visible)
+
+  const handleModalToggle = () => {
+    setIsModalOpen(!isModalOpen)
+  }
+
+  const updateColumnStatus = (index: number, _column: TableColumnState) => {
+    const updatedColumns = [...columnsVisibility]
+    updatedColumns[index].visible = !columnsVisibility[index].visible
+    setColumnsVisibility(updatedColumns)
+  }
+
+  const onSave = () => {
+    setIsModalOpen(false)
+
+    if (storageColumnLocation) {
+      artemisPreferencesService.saveColumnPreferences(storageColumnLocation, columnsVisibility)
+    }
+
+    setAllColumns(allColumns => {
+      const changed = [...allColumns]
+      changed.forEach(c => {
+        c.visible = columnsVisibility.find(_c => _c.id === c.id)?.visible ?? false
+      })
+      return changed
+    })
+  }
+
+  const cancel = () => {
+    setIsModalOpen(false)
+
+    setColumnsVisibility(columnsVisibility => {
+      const changed = [...columnsVisibility]
+      changed.forEach(c => {
+        c.visible = allColumns.find(_c => _c.id === c.id)?.visible ?? false
+      })
+      return changed
+    })
+  }
+
+  const selectAllColumns = () => {
+    const updatedColumns = [...columnsVisibility]
+    updatedColumns.map((column) => {
+      column.visible = true
+      return true
+    })
+    setColumnsVisibility(updatedColumns)
+  }
+
+  const unselectAllColumns = () => {
+    const updatedColumns = [...columnsVisibility]
+    updatedColumns.map((column) => {
+      column.visible = false
+      return false
+    })
+    setColumnsVisibility(updatedColumns)
+  }
+
+  return (
+      <>
+        <Toolbar id='artemis-tabs-toolbar'>
+          <ToolbarContent>
+            {/* Sorting */}
+            <ToolbarItem key='table-sort'>
+              <Dropdown
+                  isOpen={isSortDropdownOpen}
+                  toggle={(toggleRef) => (
+                      <MenuToggle variant='plain' ref={toggleRef} onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}>
+                        <SortAmountDownIcon />
+                      </MenuToggle>
+                  )}>
+                <DropdownGroup key='sort-columns' aria-label='Sort column'>
+                  <DropdownList>
+                    {Object.values(allColumns).filter((element) => element.visible).map((column, _columnIndex) => (
+                        <DropdownItem key={column.id} isSelected={activeSort.column === column.id} value={column.name}
+                                      onClick={() => updateActiveSort(column.id, activeSort.order)}>
+                          {column.name}
+                        </DropdownItem>
+                    ))}
+                  </DropdownList>
+                </DropdownGroup>
+                <Divider key='separator' />
+                <DropdownGroup key='sort-direction' aria-label='Sort direction'>
+                  <DropdownList>
+                    <DropdownItem key='ascending' isSelected={activeSort.order === SortDirection.ASCENDING}
+                                  onClick={() => updateActiveSort(activeSort.column!, SortDirection.ASCENDING)}>
+                      Ascending
+                    </DropdownItem>
+                    <DropdownItem key='descending' isSelected={activeSort.order === SortDirection.DESCENDING}
+                                  onClick={() => updateActiveSort(activeSort.column!, SortDirection.DESCENDING)}>
+                      Descending
+                    </DropdownItem>
+                  </DropdownList>
+                </DropdownGroup>
+              </Dropdown>
+            </ToolbarItem>
+            {/* Refreshing */}
+            <ToolbarItem key='table-refresh'>
+              <Button variant="link" isCircle aria-label="Refresh" icon={<RhUiRefreshIcon />} onClick={() => {
+                refresh?.()
+              }} />
+            </ToolbarItem>
+            <ToolbarItem variant='separator' />
+
+            {/* field|operation|value|[filter]|[clear] */}
+            <ArtemisFilters key={`${displayFilter.column}:${displayFilter.operation}:${displayFilter.input}`}
+                            columns={allColumns} filter={displayFilter} onApplyFilter={applyFilter} />
+            <ToolbarItem variant='separator' />
+
+            {/* Single button for column management of the current table */}
+            <ToolbarItem key='column-select'>
+              <Button variant='link' onClick={handleModalToggle}>Manage Columns ({visibleColumns.length}/{allColumns.length})</Button>
+            </ToolbarItem>
+
+            {/* Additional actions configured by the components using ArtemisTable */}
+            {(toolbarActions?.length ?? 0) > 0 && (<ToolbarItem variant='separator'></ToolbarItem>)}
+            {
+              toolbarActions?.map(action => (
+                  <ToolbarItem key={'toolbar-action-' + action.name}>
+                    <Button size='sm' variant='secondary' onClick={() => action.action()}>{action.name}</Button>
+                  </ToolbarItem>))
+            }
+          </ToolbarContent>
+        </Toolbar>
+
+        {/* Optional toolbar if there are any applicable filters */}
+        {tabFilters.length > 0 && (<Toolbar>
+          <ToolbarContent>
+            <ToolbarItem>
+              <LabelGroup categoryName='Filters' isClosable onClick={() => applyFilter(tabFilters[0], RemoveFilterScope.ALL)}>
+                {tabFilters.map((f, idx) => {
+                  if (!(f.column && f.operation)) {
+                    return null
+                  }
+                  const column = allColumns.find(c => c.id === f.column)
+                  if (column) {
+                    const columnName = column.name
+                    let prefix = ''
+                    if (column.type === ColumnType.BOOLEAN) {
+                      if (f.operation === 'EQUALS') {
+                        prefix = 'true' === f.input ? 'IS ' : 'IS NOT '
+                      } else if (f.operation === 'NOT_EQUALS') {
+                        prefix = 'false' === f.input ? 'IS ' : 'IS NOT '
+                      }
+                    }
+                    const suffix = column.type !== ColumnType.BOOLEAN ? ` ${operationSymbol(f.operation)} ${f.input}` : ''
+                    // const prefix =
+                    return (
+                        <Label key={`f-${idx}`} color={LabelColor.purple} onClose={() => applyFilter(f, RemoveFilterScope.SINGLE)}>
+                          {prefix}{columnName ?? f.column}{suffix}
+                        </Label>
+                    )
+                  }
+                })}
+              </LabelGroup>
+            </ToolbarItem>
+          </ToolbarContent>
+        </Toolbar>)}
+        {/*{tabFilters.length == 0 && (<Alert isInline isPlain title='Click "Filter" to add first filter condition' variant='info' />)}*/}
+
+        <Modal
+            isOpen={isModalOpen}
+            variant='small'
+            onClose={cancel}
+        >
+          <ModalHeader>
+            <Title headingLevel='h2' size='lg'>Manage Columns</Title>
+            <Content>Selected categories are displayed in the table.</Content>
+            <Content>
+              <Button isInline onClick={selectAllColumns} variant='link'>
+                Select all
+              </Button>{ ' | ' }
+              <Button isInline onClick={unselectAllColumns} variant='link'>
+                Unselect all
+              </Button>
+            </Content>
+          </ModalHeader>
+          <ModalBody>
+            <DataList aria-label='Table column management' id='table-column-management' isCompact>
+              {columnsVisibility.map((column, id) => (
+                  <DataListItem key={`table-column-management-${column.id}`} aria-labelledby={`table-column-management-${column.id}`}>
+                    <DataListItemRow>
+                      <DataListCheck
+                          aria-labelledby={`table-column-management-item-${column.id}`}
+                          isChecked={column.visible}
+                          name={`check-${column.id}`}
+                          id={`check-${column.id}`}
+                          onChange={_checked => updateColumnStatus(id, column)}
+                      />
+                      <DataListItemCells
+                          dataListCells={[
+                            <DataListCell id={`table-column-management-item-${column.id}`} key={`table-column-management-item-${column.id}`}>
+                              <label htmlFor={`check-${column.id}`}>{column.name}</label>
+                            </DataListCell>
+                          ]}
+                      />
+                    </DataListItemRow>
+                  </DataListItem>
+              ))}
+            </DataList>
+          </ModalBody>
+          <ModalFooter>
+            <Button id='columns-save-button' key='save' variant='primary' onClick={onSave}>
+              Save
+            </Button>
+            <Button key='close' variant='link' onClick={cancel}>
+              Cancel
+            </Button>
+          </ModalFooter>
+        </Modal>
+      </>
+  )
+}
+
 /**
  * Common component for displaying tables of Artemis objects. It provides an interface (set of accepted properties)
  * for unified experience with filtering and cross-table navigation (like navigating to session table from connection
@@ -206,7 +459,6 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
 
   // -- state for modals
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false)
-  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const visibleColumns = columns.filter((column) => column.visible)
 
@@ -238,42 +490,6 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
       apply = false
     }
   }, [page, perPage, activeSort, tabFilters, props.getData, props.refreshCount])
-
-  const handleModalToggle = () => {
-    setIsModalOpen(!isModalOpen)
-  }
-
-  const onSave = () => {
-    setIsModalOpen(!isModalOpen)
-
-    if (props.storageColumnLocation) {
-      artemisPreferencesService.saveColumnPreferences(props.storageColumnLocation, columns)
-    }
-  }
-
-  const selectAllColumns = () => {
-    const updatedColumns = [...columns]
-    updatedColumns.map((column) => {
-      column.visible = true
-      return true
-    })
-    setColumns(updatedColumns)
-  }
-
-  const unselectAllColumns = () => {
-    const updatedColumns = [...columns]
-    updatedColumns.map((column) => {
-      column.visible = false
-      return false
-    })
-    setColumns(updatedColumns)
-  }
-
-  const updateColumnStatus = (index: number, _column: TableColumn) => {
-    const updatedColumns = [...columns]
-    updatedColumns[index].visible = !columns[index].visible
-    setColumns(updatedColumns)
-  }
 
   const updateActiveSort = (id: string, order: SortDirection) => {
     const updatedActiveSort: ActiveSort = {
@@ -357,162 +573,16 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
     />
   )
 
-  const renderManageColumnsModal = () => {
-    return (
-      <Modal
-        isOpen={isModalOpen}
-        variant='small'
-        onClose={handleModalToggle}
-      >
-        <ModalHeader>
-          <Title headingLevel='h2' size='lg'>Manage Columns</Title>
-          <Content>Selected categories are displayed in the table.</Content>
-          <Content>
-            <Button isInline onClick={selectAllColumns} variant='link'>
-              Select all
-            </Button>{ ' | ' }
-            <Button isInline onClick={unselectAllColumns} variant='link'>
-              Unselect all
-            </Button>
-          </Content>
-        </ModalHeader>
-        <ModalBody>
-          <DataList aria-label='Table column management' id='table-column-management' isCompact>
-            {columns.map((column, id) => (
-              <DataListItem key={`table-column-management-${column.id}`} aria-labelledby={`table-column-management-${column.id}`}>
-                <DataListItemRow>
-                  <DataListCheck
-                    aria-labelledby={`table-column-management-item-${column.id}`}
-                    isChecked={column.visible}
-                    name={`check-${column.id}`}
-                    id={`check-${column.id}`}
-                    onChange={_checked => updateColumnStatus(id, column)}
-                  />
-                  <DataListItemCells
-                    dataListCells={[
-                      <DataListCell id={`table-column-management-item-${column.id}`} key={`table-column-management-item-${column.id}`}>
-                        <label htmlFor={`check-${column.id}`}>{column.name}</label>
-                      </DataListCell>
-                    ]}
-                  />
-                </DataListItemRow>
-              </DataListItem>
-            ))}
-          </DataList>
-        </ModalBody>
-        <ModalFooter>
-          <Button id='columns-save-button' key='save' variant='primary' onClick={onSave}>
-            Save
-          </Button>
-          <Button key='close' variant='link' onClick={handleModalToggle}>
-            Cancel
-          </Button>
-        </ModalFooter>
-      </Modal>
-    )
-  }
-
   return (
     <>
-      <Toolbar id='artemis-tabs-toolbar'>
-        <ToolbarContent>
-          {/* Sorting */}
-          <ToolbarItem key='table-sort'>
-            <Dropdown
-                isOpen={isSortDropdownOpen}
-                toggle={(toggleRef) => (
-                  <MenuToggle variant='plain' ref={toggleRef} onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}>
-                    <SortAmountDownIcon />
-                  </MenuToggle>
-                )}>
-              <DropdownGroup key='sort-columns' aria-label='Sort column'>
-                <DropdownList>
-                  {Object.values(props.allColumns).filter((element) => element.visible).map((column, _columnIndex) => (
-                    <DropdownItem key={column.id} isSelected={activeSort.column === column.id} value={column.name}
-                                  onClick={() => updateActiveSort(column.id, activeSort.order)}>
-                      {column.name}
-                    </DropdownItem>
-                  ))}
-                </DropdownList>
-              </DropdownGroup>
-              <Divider key='separator' />
-              <DropdownGroup key='sort-direction' aria-label='Sort direction'>
-                <DropdownList>
-                  <DropdownItem key='ascending' isSelected={activeSort.order === SortDirection.ASCENDING}
-                                onClick={() => updateActiveSort(activeSort.column!, SortDirection.ASCENDING)}>
-                    Ascending
-                  </DropdownItem>
-                  <DropdownItem key='descending' isSelected={activeSort.order === SortDirection.DESCENDING}
-                                onClick={() => updateActiveSort(activeSort.column!, SortDirection.DESCENDING)}>
-                    Descending
-                  </DropdownItem>
-                </DropdownList>
-              </DropdownGroup>
-            </Dropdown>
-          </ToolbarItem>
-          {/* Refreshing */}
-          <ToolbarItem key='table-refresh'>
-            <Button variant="link" isCircle aria-label="Refresh" icon={<RhUiRefreshIcon />} onClick={() => {
-              props.refresh?.()
-            }} />
-          </ToolbarItem>
-          <ToolbarItem variant='separator' />
-
-          {/* field|operation|value|[filter]|[clear] */}
-          <ArtemisFilters key={`${displayFilter.column}:${displayFilter.operation}:${displayFilter.input}`}
-                          columns={columns} filter={displayFilter} onApplyFilter={applyFilter} />
-          <ToolbarItem variant='separator' />
-
-          {/* Single button for column management of the current table */}
-          <ToolbarItem key='column-select'>
-            <Button variant='link' onClick={handleModalToggle}>Manage Columns ({visibleColumns.length}/{columns.length})</Button>
-          </ToolbarItem>
-
-          {/* Additional actions configured by the components using ArtemisTable */}
-          {(props.toolbarActions?.length ?? 0) > 0 && (<ToolbarItem variant='separator'></ToolbarItem>)}
-          {
-            props.toolbarActions?.map(action => (
-              <ToolbarItem key={'toolbar-action-' + action.name}>
-                <Button size='sm' variant='secondary' onClick={() => action.action()}>{action.name}</Button>
-              </ToolbarItem>))
-          }
-        </ToolbarContent>
-      </Toolbar>
-
-      {/* Optional toolbar if there are any applicable filters */}
-      {tabFilters.length > 0 && (<Toolbar>
-        <ToolbarContent>
-          <ToolbarItem>
-            <LabelGroup categoryName='Filters' isClosable onClick={() => applyFilter(tabFilters[0], RemoveFilterScope.ALL)}>
-              {tabFilters.map((f, idx) => {
-                if (!(f.column && f.operation)) {
-                  return null
-                }
-                const column = columns.find(c => c.id === f.column)
-                if (column) {
-                  const columnName = column.name
-                  let prefix = ''
-                  if (column.type === ColumnType.BOOLEAN) {
-                    if (f.operation === 'EQUALS') {
-                      prefix = 'true' === f.input ? 'IS ' : 'IS NOT '
-                    } else if (f.operation === 'NOT_EQUALS') {
-                      prefix = 'false' === f.input ? 'IS ' : 'IS NOT '
-                    }
-                  }
-                  const suffix = column.type !== ColumnType.BOOLEAN ? ` ${operationSymbol(f.operation)} ${f.input}` : ''
-                  // const prefix =
-                  return (
-                      <Label key={`f-${idx}`} color={LabelColor.purple} onClose={() => applyFilter(f, RemoveFilterScope.SINGLE)}>
-                        {prefix}{columnName ?? f.column}{suffix}
-                      </Label>
-                  )
-                }
-              })}
-            </LabelGroup>
-          </ToolbarItem>
-        </ToolbarContent>
-      </Toolbar>)}
-      {/*{tabFilters.length == 0 && (<Alert isInline isPlain title='Click "Filter" to add first filter condition' variant='info' />)}*/}
+      <ArtemisTableToolbar allColumns={columns} setAllColumns={setColumns}
+                           toolbarActions={props.toolbarActions} refresh={props.refresh}
+                           isSortDropdownOpen={isSortDropdownOpen} setIsSortDropdownOpen={setIsSortDropdownOpen}
+                           activeSort={activeSort}
+                           storageColumnLocation={props.storageColumnLocation} displayFilter={displayFilter}
+                           updateActiveSort={updateActiveSort}
+                           tabFilters={tabFilters}
+                           applyFilter={applyFilter} />
 
       <Divider />
 
@@ -569,7 +639,6 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
       </InnerScrollContainer>
 
       {renderPagination(PaginationVariant.bottom)}
-      {renderManageColumnsModal()}
     </>
   )
 }

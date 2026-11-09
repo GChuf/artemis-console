@@ -79,6 +79,8 @@ export type TableColumn = {
   component?: (value: any) => React.ReactNode
 }
 
+export type TableColumnState = Pick<TableColumn, 'id' | 'name' | 'visible'>
+
 /**
  * A type of a single row to be displayed in `<ArtemisTable>`
  */

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import { TableColumn } from "./table/types"
+import { TableColumn, TableColumnState } from "./table/types"
 
 const PAGE_SIZE = ".pageSize";
 
@@ -33,7 +33,7 @@ export interface IArtemisPreferencesService {
   loadArtemisPreferences(): ArtemisOptions
   saveArtemisPreferences(newValues: Partial<ArtemisOptions>): void
   loadColumnPreferences(storageLocation: string, columns: TableColumn[]): TableColumn[]
-  saveColumnPreferences(storageLocation: string, columns: TableColumn[]): void
+  saveColumnPreferences(storageLocation: string, columns: TableColumnState[]): void
 }
 
 export type ArtemisOptions = {
@@ -82,7 +82,7 @@ class ArtemisPreferencesService implements IArtemisPreferencesService {
     return columns;
   }
 
-  saveColumnPreferences(storageLocation: string, columns: TableColumn[]) {
+  saveColumnPreferences(storageLocation: string, columns: TableColumnState[]) {
     const data: { name: string; visible: boolean }[] = [];
     columns.forEach(column => { data.push({ name: column.id, visible: column.visible }) });
     localStorage.setItem(storageLocation, JSON.stringify(data));
