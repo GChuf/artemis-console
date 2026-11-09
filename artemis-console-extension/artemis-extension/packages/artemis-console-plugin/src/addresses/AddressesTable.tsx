@@ -139,7 +139,14 @@ export const AddressesTable: React.FunctionComponent<ArtemisTableFilterProps> = 
     }] : []
   }, [canCreateAddress])
 
+  const permissions = useMemo(() => artemisService.getAddressPermissions(brokerNode), [brokerNode])
+
   const getRowActions = useCallback((row: TableRow): IAction[] => {
+    let rowPerms = permissions[row.name]
+    if (rowPerms == undefined) {
+      // the name may contain characters which are delimited in the mbean name
+      rowPerms = permissions[row.name.replaceAll('\\', '\\\\')]
+    }
     const actions: IAction[] = [
       {
         title: 'Show in Artemis JMX',
@@ -195,8 +202,7 @@ export const AddressesTable: React.FunctionComponent<ArtemisTableFilterProps> = 
       })
     }
 
-    const canSendMessage = artemisService.canSendMessageToAddress(brokerNode, row.name)
-    if (canSendMessage) {
+    if (rowPerms?.canSend) {
       actions.push({ isSeparator: true })
       actions.push({
         title: 'Send Message',
@@ -208,7 +214,7 @@ export const AddressesTable: React.FunctionComponent<ArtemisTableFilterProps> = 
     }
 
     return actions
-  }, [brokerNode, canCreateQueue, canDeleteAddress, routeNavigate])
+  }, [permissions, canCreateQueue, canDeleteAddress, routeNavigate])
 
   const reload = useCallback(() => {
     setRefreshCount(c => c + 1)
