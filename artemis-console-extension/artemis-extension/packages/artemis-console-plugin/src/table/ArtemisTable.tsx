@@ -153,6 +153,22 @@ export type ArtemisTableProps = ArtemisTableFilterProps & {
   storageColumnLocation?: string
 }
 
+/**
+ * Returns a dedicated container for the "Manage Columns" modal. When opening and closing, PatternFly's `Modal` sets
+ * `overflow: hidden` on its target and toggles `aria-hidden` on all the target's children. With the default target
+ * (`document.body`) that invalidates the entire page, which is noticeably slow when the table has many rows.
+ */
+const getColumnsModalTarget = (): HTMLElement => {
+  const id = 'artemis-columns-modal-root'
+  let target = document.getElementById(id)
+  if (!target) {
+    target = document.createElement('div')
+    target.id = id
+    document.body.appendChild(target)
+  }
+  return target
+}
+
 type ArtemisTableToolbarProps = {
   allColumns: TableColumn[],
   setAllColumns: React.Dispatch<React.SetStateAction<TableColumn[]>>,
@@ -355,6 +371,7 @@ const ArtemisTableToolbar: React.FunctionComponent<ArtemisTableToolbarProps> = (
             isOpen={isModalOpen}
             variant='small'
             onClose={cancel}
+            appendTo={getColumnsModalTarget}
         >
           <ModalHeader>
             <Title headingLevel='h2' size='lg'>Manage Columns</Title>

@@ -49,6 +49,7 @@ jest.mock('../artemis-service', () => ({
     canDeleteAddress: jest.fn(() => false),
     canCreateAddress: jest.fn(() => false),
     canSendMessageToAddress: jest.fn(() => false),
+    getAddressPermissions: jest.fn(() => ({})),
     getBrokerObjectName: jest.fn(() => Promise.resolve('org.apache.activemq.artemis:broker=127.0.0.1')),
     deleteAddress: jest.fn(() => Promise.resolve())
   }
