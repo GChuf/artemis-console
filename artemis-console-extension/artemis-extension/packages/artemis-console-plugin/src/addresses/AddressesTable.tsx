@@ -127,6 +127,8 @@ export const AddressesTable: React.FunctionComponent<ArtemisTableFilterProps> = 
     return loadFilteredData('addresses', artemisService.getAddresses.bind(artemisService), page, perPage, sort, filters, initialFilter)
   }, [])
 
+  const permissions = artemisService.getAddressPermissions(brokerNode)
+
   // Action to be added next to address table filter
   const createAction: ToolbarAction = {
     name: 'Create Address',
@@ -135,76 +137,100 @@ export const AddressesTable: React.FunctionComponent<ArtemisTableFilterProps> = 
     }
   }
 
-  const getRowActions = (row: TableRow): IAction[] => {
+  const showInJmxAction =(rowName: string): IAction => ({
+    title: "Show in Artemis JMX",
+    onClick: async () => {
+      setAddress(rowName);
+      const brokerObjectName = await artemisService.getBrokerObjectName();
+      const queueObjectName = createAddressObjectName(brokerObjectName, rowName);
+      findAndSelectNode(queueObjectName, rowName);
+      routeNavigate(artemisJMXPluginPath);
+    }
+  });
+
+   const attributesAction = (rowName: string) => ({
+    title: "Attributes",
+    onClick: async () => {
+      setAddress(rowName);
+      const brokerObjectName = await artemisService.getBrokerObjectName();
+      const queueObjectName = createAddressObjectName(
+        brokerObjectName,
+        rowName
+      );
+      findAndSelectNode(queueObjectName, rowName);
+      setShowAttributesDialog(true);
+    }
+  });
+  const operationsAction = (rowName: string): IAction => ({
+    title: "Operations",
+    onClick: async () => {
+      setAddress(rowName);
+      const brokerObjectName = await artemisService.getBrokerObjectName();
+      const queueObjectName = createAddressObjectName(
+        brokerObjectName,
+        rowName
+      );
+      findAndSelectNode(queueObjectName, rowName);
+      setShowOperationsDialog(true);
+    }
+  });
+  const deleteAction = (rowname: string): IAction => ({
+    title: (<><Remove2Icon /> Delete Address</>),
+    onClick: () => {
+      setAddress(rowname);
+      setShowDeleteDialog(true);
+    }
+  });
+
+  const createQueueAction = (rowName: string): IAction => ({
+    title: (<><PlusIcon /> Create Queue</>),
+    onClick: () => {
+      setAddress(rowName);
+      setShowCreateDialog(true);
+    }
+  });
+
+  const sendMessageAction = (rowName: string): IAction => ({
+    title: "Send Message",
+    onClick: () => {
+      setAddress(rowName);
+      setShowSendDialog(true);
+    }
+  });
+
+  const getRowActions = (row: any): IAction[] => {
+    const rowName = row.name;
+    let rowPerms = permissions[rowName];
+    if (rowPerms == undefined) {
+      // the name may contain characters which are delimited in the mbean name
+      rowPerms = permissions[rowName.replaceAll('\\', '\\\\')];
+    }
     const actions: IAction[] = [
-      {
-        title: 'Show in Artemis JMX',
-        onClick: async () => {
-          setAddress(row.name)
-          const brokerObjectName = await artemisService.getBrokerObjectName()
-          const addressObjectName = createAddressObjectName(brokerObjectName, row.name)
-          findAndSelectNode(addressObjectName, row.name)
-          routeNavigate(artemisJMXPluginPath)
-        }
-      },
-      {
-        title: 'Attributes',
-        onClick: async () => {
-          setAddress(row.name)
-          const brokerObjectName = await artemisService.getBrokerObjectName()
-          const addressObjectName = createAddressObjectName(brokerObjectName, row.name)
-          findAndSelectNode(addressObjectName, row.name)
-          setShowAttributesDialog(true)
-        }
-      },
-      {
-        title: 'Operations',
-        onClick: async () => {
-          setAddress(row.name)
-          const brokerObjectName = await artemisService.getBrokerObjectName()
-          const addressObjectName = createAddressObjectName(brokerObjectName, row.name)
-          findAndSelectNode(addressObjectName, row.name)
-          setShowOperationsDialog(true)
-        }
-      }
-    ]
+      showInJmxAction(rowName),
+      attributesAction(rowName),
+      operationsAction(rowName)
+    ];
+
 
     if (canDeleteAddress || canCreateQueue) {
-      actions.push({ isSeparator: true })
+      actions.push({ isSeparator: true });
     }
     if (canDeleteAddress) {
-      actions.push({
-        title: (<><Remove2Icon /> Delete Address</>),
-        onClick: () => {
-          setAddress(row.name)
-          setShowDeleteDialog(true)
-        }
-      })
+      actions.push(deleteAction(rowName));
     }
     if (canCreateQueue) {
-      actions.push({
-        title: (<><PlusIcon /> Create Queue</>),
-        onClick: () => {
-          setAddress(row.name)
-          setShowCreateDialog(true)
-        }
-      })
+      actions.push(createQueueAction(rowName));
     }
 
-    const canSendMessage = artemisService.canSendMessageToAddress(brokerNode, row.name)
-    if (canSendMessage) {
-      actions.push({ isSeparator: true })
-      actions.push({
-        title: 'Send Message',
-        onClick: () => {
-          setAddress(row.name)
-          setShowSendDialog(true)
-        }
-      })
+    if (rowPerms?.canSend) {
+      actions.push({ isSeparator: true });
+      actions.push(sendMessageAction(rowName));
     }
 
-    return actions
-  }
+    return actions;
+
+  };
+
 
   const reload = () => {
     setRefreshCount(c => c + 1)

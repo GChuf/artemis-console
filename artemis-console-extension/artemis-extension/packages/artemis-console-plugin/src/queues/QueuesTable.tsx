@@ -300,6 +300,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     }
   })
 
+  const canDeleteQueue = artemisService.canDeleteQueue(brokerNode)
   const permissions = artemisService.getQueuePermissions(brokerNode)
 
   const getRowActions = (row: TableRow): IAction[] => {
@@ -317,7 +318,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
       operationsAction(rowName, rowAddress, rowRoutingType),
     ]
 
-    if (rowPerms?.canSend || rowPerms?.canBrowse || rowPerms?.canBrowseDelivering || rowPerms?.canPurge || rowPerms?.canDelete) {
+    if (rowPerms?.canSend || rowPerms?.canBrowse || rowPerms?.canBrowseDelivering || rowPerms?.canPurge || canDeleteQueue) {
       actions.push({ isSeparator: true })
     }
 
@@ -333,7 +334,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     if (rowPerms?.canPurge) {
       actions.push(purgeAction(rowName, rowAddress, rowRoutingType))
     }
-    if (rowPerms?.canDelete) {
+    if (canDeleteQueue) {
       actions.push(deleteAction(rowName))
     }
 
