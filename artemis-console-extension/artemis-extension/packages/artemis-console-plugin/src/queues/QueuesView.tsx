@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React, { useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { Route, Routes } from 'react-router'
 
 import { Queue } from '../artemis-service'
@@ -33,13 +33,13 @@ export const QueuesView: React.FunctionComponent<ArtemisTableFilterProps> = prop
   // ... and for the details of particular message
   const [currentMessage, setCurrentMessage] = useState<Message>()
 
-  const selectQueue = (queue: Queue) => {
+  const selectQueue = useCallback((queue: Queue) => {
     setCurrentQueue(queue)
-  }
+  }, [])
 
-  const selectMessage = (message: Message) => {
+  const selectMessage = useCallback((message: Message) => {
     setCurrentMessage(message)
-  }
+  }, [])
 
   return (
       <Routes>

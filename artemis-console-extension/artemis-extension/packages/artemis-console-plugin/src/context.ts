@@ -102,7 +102,7 @@ export function useArtemisTree() {
         }
     }, [populateTree])
 
-    const findAndSelectNode = (objectName: string, name: string) => {
+    const findAndSelectNode = useCallback((objectName: string, name: string) => {
         let node: MBeanNode | null = tree.find(node => { 
             return node.objectName === objectName 
         });
@@ -114,7 +114,8 @@ export function useArtemisTree() {
             parentNode?.children?.push(node);
         }
         setSelectedNode(node);
-    }
+    }, [tree, setSelectedNode])
+
     return { tree, loaded, brokerNode, jmxDomain, selectedNode, setSelectedNode, findAndSelectNode }
 }
 

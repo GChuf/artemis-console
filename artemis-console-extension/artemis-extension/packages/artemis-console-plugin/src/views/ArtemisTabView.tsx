@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { PageSection, Nav, NavItem, NavList, Button } from '@patternfly/react-core'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 
@@ -82,7 +82,7 @@ export const ArtemisTabs: React.FunctionComponent = () => {
    * @param tab
    * @param filter
    */
-  const switchTab = (tab: ArtemisTabId, filter?: Filter) => {
+  const switchTab = useCallback((tab: ArtemisTabId, filter?: Filter) => {
     if (filter) {
       setSearchFilters(filters => {
         const newFilters: TableFilters = { ...filters }
@@ -94,7 +94,7 @@ export const ArtemisTabs: React.FunctionComponent = () => {
       })
     }
     navigate({ pathname: `${artemisPluginPath}/${tab}`, search })
-  }
+  }, [navigate, search])
 
   /**
    * Function passed to individual tables which display filtering UI. When a filter is added, this function
@@ -102,7 +102,7 @@ export const ArtemisTabs: React.FunctionComponent = () => {
    * @param filter
    * @param remove
    */
-  const filterApplied = (filter: Filter, remove?: RemoveFilterScope) => {
+  const filterApplied = useCallback((filter: Filter, remove?: RemoveFilterScope) => {
     setSearchFilters(filters => {
       let filterArray: Filter[]
       if (remove) {
@@ -124,7 +124,7 @@ export const ArtemisTabs: React.FunctionComponent = () => {
       }
       return { ...filters, searchFilters: filterArray }
     })
-  }
+  }, [])
 
   useEffect(() => {
     // synchronize with "external storage"

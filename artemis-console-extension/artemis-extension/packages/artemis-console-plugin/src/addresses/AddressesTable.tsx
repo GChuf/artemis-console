@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React, { useCallback, useContext, useState } from 'react'
+import React, { memo, useCallback, useContext, useMemo, useState } from 'react'
 import {
   Button, Content, ContentVariants,
   Modal,
@@ -105,6 +105,8 @@ const allColumns: TableColumn[] = [
 const initialFilter: Filter = { tab: 'addresses', column: allColumns[1].id, operation: 'CONTAINS', input: '' }
 const initialSort: ActiveSort = { column: allColumns[1].id, order: SortDirection.ASCENDING }
 
+const MemoizedArtemisTable = memo(ArtemisTable)
+
 export const AddressesTable: React.FunctionComponent<ArtemisTableFilterProps> = props => {
 
   const { brokerNode, selectedNode, findAndSelectNode } = useContext(ArtemisContext)
@@ -128,14 +130,16 @@ export const AddressesTable: React.FunctionComponent<ArtemisTableFilterProps> = 
   }, [])
 
   // Action to be added next to address table filter
-  const createAction: ToolbarAction = {
-    name: 'Create Address',
-    action: () => {
-      setShowCreateAddressDialog(true)
-    }
-  }
+  const createActions: ToolbarAction[] = useMemo(() => {
+    return canCreateAddress ? [{
+      name: 'Create Address',
+      action: () => {
+        setShowCreateAddressDialog(true)
+      }
+    }] : []
+  }, [canCreateAddress])
 
-  const getRowActions = (row: TableRow): IAction[] => {
+  const getRowActions = useCallback((row: TableRow): IAction[] => {
     const actions: IAction[] = [
       {
         title: 'Show in Artemis JMX',
@@ -204,11 +208,11 @@ export const AddressesTable: React.FunctionComponent<ArtemisTableFilterProps> = 
     }
 
     return actions
-  }
+  }, [brokerNode, canCreateQueue, canDeleteAddress, routeNavigate])
 
-  const reload = () => {
+  const reload = useCallback(() => {
     setRefreshCount(c => c + 1)
-  }
+  }, [])
 
   const handleDeleteAddress = () => {
     artemisService.deleteAddress(address)
@@ -229,20 +233,18 @@ export const AddressesTable: React.FunctionComponent<ArtemisTableFilterProps> = 
 
   return (
     <>
-      <ArtemisTable allColumns={allColumns}
-                    initialFilter={initialFilter}
-                    initialSort={initialSort}
-                    getData={listAddresses}
-                    storageColumnLocation={columnStorage.addresses}
-                    getRowActions={getRowActions}
-                    toolbarActions={canCreateAddress ? [createAction] : []}
-                    refreshCount={refreshCount}
-                    switchTab={props.switchTab}
-                    filters={props.filters}
-                    refresh={() => {
-                      setRefreshCount(c => c + 1)
-                    }}
-                    editGlobalFilter={props.editGlobalFilter} />
+      <MemoizedArtemisTable allColumns={allColumns}
+                            initialFilter={initialFilter}
+                            initialSort={initialSort}
+                            getData={listAddresses}
+                            storageColumnLocation={columnStorage.addresses}
+                            getRowActions={getRowActions}
+                            toolbarActions={createActions}
+                            refreshCount={refreshCount}
+                            switchTab={props.switchTab}
+                            filters={props.filters}
+                            refresh={reload}
+                            editGlobalFilter={props.editGlobalFilter} />
 
       <Modal aria-label='create-queue-modal' variant={ModalVariant.medium} isOpen={showCreateDialog}
              onClose={() => setShowCreateDialog(false)}

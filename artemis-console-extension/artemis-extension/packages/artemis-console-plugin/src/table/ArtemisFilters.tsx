@@ -205,23 +205,26 @@ export const ArtemisFilters: React.FC<ArtemisFiltersProps> = ({ columns, filter,
 
       <ToolbarItem key='filter-value'>
         {filterColumn && filterColumn.type !== ColumnType.BOOLEAN && (
-            <SearchInput
-              aria-label='Filter'
-              ref={searchRef}
-              value={filterColumn.id === filter.column && filter.input ? `${filter.input}` : ''}
-              onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    addFilter()
-                  }
-                  if (e.key === 'Escape') {
-                    if (searchRef.current) {
-                      searchRef.current.value = ''
+            <div>
+              <SearchInput
+                aria-label='Filter'
+                ref={searchRef}
+                style={{ contain: 'strict', width: '14rem', height: 'calc(1lh + 2 * var(--pf-t--global--spacer--control--vertical--default))' }}
+                value={filterColumn.id === filter.column && filter.input ? `${filter.input}` : ''}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      addFilter()
+                    }
+                    if (e.key === 'Escape') {
+                      if (searchRef.current) {
+                        searchRef.current.value = ''
+                      }
                     }
                   }
                 }
-              }
-              isDisabled={filterableColumns.length == 0}
-            />
+                isDisabled={filterableColumns.length == 0}
+              />
+            </div>
         )}
         {filterColumn && filterColumn.type === ColumnType.BOOLEAN && (
             <Switch aria-label='Filter'

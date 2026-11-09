@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import React, { useCallback, useContext, useMemo, useState } from 'react'
+import React, { memo, useCallback, useContext, useMemo, useState } from 'react'
 import {
   Button, Content, ContentVariants,
   Modal,
@@ -83,6 +83,8 @@ const getConsumersFilter: (row: TableRow) => Filter = row => {
 const initialFilter: Filter = { tab: 'queues', column: 'name', operation: 'CONTAINS', input: '' }
 const initialSort: ActiveSort = { column: 'name', order: SortDirection.ASCENDING }
 
+const MemoizedArtemisTable = memo(ArtemisTable)
+
 export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = props => {
 
   const navigate = useNavigate()
@@ -93,7 +95,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
   const messageView: (row: TableRow) => void = useCallback(row => {
     props.selectQueue({ name: row.name, address: row.address, routingType: row.routingType })
     navigate({ pathname: `${artemisPluginPath}/queues/messages`, search })
-  }, [props.selectQueue])
+  }, [props.selectQueue, navigate, search])
 
   // for queues, all the values come (from the broker in JSON) as Strings, but lots of these are numbers and booleans
   // Note: for <QueuesTable> allColumns can't be defined at module level, because of the link property which uses
@@ -166,7 +168,7 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     setShowSendDialog(false)
   }
 
-  const deleteQueue = async (name: string) => {
+  const deleteQueue = useCallback(async (name: string) => {
     await artemisService.deleteQueue(name)
       .then((_value: unknown) => {
         setShowDeleteDialog(false)
@@ -181,9 +183,9 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
         setShowDeleteDialog(false)
         eventService.notify({ type: 'danger', message: 'Queue Not Deleted: ' + jolokiaService.errorMessage(error) })
       })
-  }
+  }, [])
 
-  const purgeQueue = (name: string, address: string, routingType: string) => {
+  const purgeQueue = useCallback((name: string, address: string, routingType: string) => {
     artemisService.purgeQueue(name, address, routingType)
       .then(() => {
         setShowPurgeDialog(false)
@@ -198,89 +200,11 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
         setShowPurgeDialog(false)
         eventService.notify({ type: 'danger', message: 'Queue Not Purged: ' + jolokiaService.errorMessage(error) })
       })
-  }
+  }, [])
 
-  const showInJmxAction = (rowName: string, rowAddress: string, rowRoutingType: string): IAction => ({
-    title: "Show in Artemis JMX",
-    onClick: async () => {
-      setAddress(rowName)
-      const brokerObjectName = await artemisService.getBrokerObjectName()
-      const queueObjectName = createQueueObjectName(brokerObjectName, rowAddress, rowRoutingType, rowName)
-      findAndSelectNode(queueObjectName, rowName)
-      routeNavigate(artemisJMXPluginPath)
-    }
-  })
+  const permissions = useMemo(() => artemisService.getQueuePermissions(brokerNode), [brokerNode])
 
-  const attributesAction = (rowName: string, rowAddress: string, rowRoutingType: string) => ({
-    title: "Attributes",
-    onClick: async () => {
-      setAddress(rowName)
-      const brokerObjectName = await artemisService.getBrokerObjectName()
-      const queueObjectName = createQueueObjectName(
-        brokerObjectName,
-        rowAddress,
-        rowRoutingType,
-        rowName
-      )
-      findAndSelectNode(queueObjectName, rowName)
-      setShowAttributesDialog(true)
-    }
-  })
-
-  const operationsAction = (rowName: string, rowAddress: string, rowRoutingType: string): IAction => ({
-    title: "Operations",
-    onClick: async () => {
-      setAddress(rowName)
-      const brokerObjectName = await artemisService.getBrokerObjectName()
-      const queueObjectName = createQueueObjectName(
-        brokerObjectName,
-        rowAddress,
-        rowRoutingType,
-        rowName
-      )
-      findAndSelectNode(queueObjectName, rowName)
-      setShowOperationsDialog(true)
-    }
-  })
-
-  const deleteAction = (rowName: string): IAction => ({
-    title: (<><Remove2Icon /> Delete</>),
-    onClick: () => {
-      setQueue(rowName)
-      setShowDeleteDialog(true)
-    }
-  })
-
-  const sendMessageAction = (rowName: string, rowAddress: string, rowRoutingType: string): IAction => ({
-    title: "Send Message",
-    onClick: () => {
-      setQueue(rowName)
-      setAddress(rowAddress)
-      setRoutingType(rowRoutingType)
-      setShowSendDialog(true)
-    }
-  })
-
-  const purgeAction = (rowName: string, rowAddress: string, rowRoutingType: string): IAction => ({
-    title: (<><RhUiCleanUpIcon /> Purge</>),
-    onClick: () => {
-      setQueue(rowName)
-      setQueueToPurgeAddress(rowAddress)
-      setQueueToPurgeRoutingType(rowRoutingType)
-      setShowPurgeDialog(true)
-    }
-  })
-
-  const browseAction = (row: TableRow): IAction => ({
-    title: "Browse Messages",
-    onClick: () => {
-      messageView(row)
-    }
-  })
-
-  const permissions = artemisService.getQueuePermissions(brokerNode)
-
-  const getRowActions = (row: TableRow): IAction[] => {
+  const getRowActions = useCallback((row: TableRow): IAction[] => {
     const rowName = row.name
     const rowAddress = row.address
     const rowRoutingType = row.routingType
@@ -290,9 +214,46 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
       rowPerms = permissions[row.name.replaceAll('\\', '\\\\')]
     }
     const actions: IAction[] = [
-      showInJmxAction(rowName, rowAddress, rowRoutingType),
-      attributesAction(rowName, rowAddress, rowRoutingType),
-      operationsAction(rowName, rowAddress, rowRoutingType),
+      {
+        title: "Show in Artemis JMX",
+        onClick: async () => {
+          setAddress(rowName)
+          const brokerObjectName = await artemisService.getBrokerObjectName()
+          const queueObjectName = createQueueObjectName(brokerObjectName, rowAddress, rowRoutingType, rowName)
+          findAndSelectNode(queueObjectName, rowName)
+          routeNavigate(artemisJMXPluginPath)
+        }
+      },
+      {
+        title: "Attributes",
+        onClick: async () => {
+          setAddress(rowName)
+          const brokerObjectName = await artemisService.getBrokerObjectName()
+          const queueObjectName = createQueueObjectName(
+              brokerObjectName,
+              rowAddress,
+              rowRoutingType,
+              rowName
+          )
+          findAndSelectNode(queueObjectName, rowName)
+          setShowAttributesDialog(true)
+        }
+      },
+      {
+        title: "Operations",
+        onClick: async () => {
+          setAddress(rowName)
+          const brokerObjectName = await artemisService.getBrokerObjectName()
+          const queueObjectName = createQueueObjectName(
+              brokerObjectName,
+              rowAddress,
+              rowRoutingType,
+              rowName
+          )
+          findAndSelectNode(queueObjectName, rowName)
+          setShowOperationsDialog(true)
+        }
+      }
     ]
 
     if (rowPerms?.canSend || rowPerms?.canBrowse || rowPerms?.canPurge || rowPerms?.canDelete) {
@@ -300,36 +261,65 @@ export const QueuesTable: React.FunctionComponent<QueuesTableFilterProps> = prop
     }
 
     if (rowPerms?.canSend) {
-      actions.push(sendMessageAction(rowName, rowAddress, rowRoutingType))
+      actions.push({
+        title: "Send Message",
+        onClick: () => {
+          setQueue(rowName)
+          setAddress(rowAddress)
+          setRoutingType(rowRoutingType)
+          setShowSendDialog(true)
+        }
+      })
     }
     if (rowPerms?.canBrowse) {
-      actions.push(browseAction(row))
+      actions.push({
+        title: "Browse Messages",
+        onClick: () => {
+          messageView(row)
+        }
+      })
     }
     if (rowPerms?.canPurge) {
-      actions.push(purgeAction(rowName, rowAddress, rowRoutingType))
+      actions.push({
+        title: (<><RhUiCleanUpIcon /> Purge</>),
+        onClick: () => {
+          setQueue(rowName)
+          setQueueToPurgeAddress(rowAddress)
+          setQueueToPurgeRoutingType(rowRoutingType)
+          setShowPurgeDialog(true)
+        }
+      })
     }
     if (rowPerms?.canDelete) {
-      actions.push(deleteAction(rowName))
+      actions.push({
+        title: (<><Remove2Icon /> Delete</>),
+        onClick: () => {
+          setQueue(rowName)
+          setShowDeleteDialog(true)
+        }
+      })
     }
 
     return actions
-  }
+  }, [routeNavigate, permissions])
+
+  const reload = useCallback(() => {
+    setRefreshCount(c => c + 1)
+  }, [])
 
   return (
     <>
-      <ArtemisTable allColumns={allColumns}
-                    initialFilter={initialFilter}
-                    initialSort={initialSort}
-                    getData={listQueues}
-                    storageColumnLocation={columnStorage.queues}
-                    getRowActions={getRowActions}
-                    refreshCount={refreshCount}
-                    switchTab={props.switchTab}
-                    filters={props.filters}
-                    refresh={() => {
-                      setRefreshCount(c => c + 1)
-                    }}
-                    editGlobalFilter={props.editGlobalFilter} />
+      <MemoizedArtemisTable allColumns={allColumns}
+                            initialFilter={initialFilter}
+                            initialSort={initialSort}
+                            getData={listQueues}
+                            storageColumnLocation={columnStorage.queues}
+                            getRowActions={getRowActions}
+                            refreshCount={refreshCount}
+                            switchTab={props.switchTab}
+                            filters={props.filters}
+                            refresh={reload}
+                            editGlobalFilter={props.editGlobalFilter} />
 
       <Modal aria-label='queue-delete-modal' variant={ModalVariant.medium} isOpen={showDeleteDialog}
              onClose={() => closeDeleteDialog()}
