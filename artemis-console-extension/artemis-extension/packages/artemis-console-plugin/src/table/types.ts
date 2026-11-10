@@ -77,6 +77,11 @@ export type TableColumn = {
   link?: (row: TableRow) => void
   /** Column definition may provide a function which returns a custom React component for the value */
   component?: (value: any) => React.ReactNode
+  /**
+   * Optional width of the column as a CSS length (e.g. `'8rem'`). The table uses fixed layout, so columns without
+   * a width (explicit or the default for their `type`, see `defaultColumnWidths`) share the remaining space equally.
+   */
+  width?: string
 }
 
 export type TableColumnState = Pick<TableColumn, 'id' | 'name' | 'visible'>

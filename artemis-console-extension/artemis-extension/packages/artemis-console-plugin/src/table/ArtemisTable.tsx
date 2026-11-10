@@ -72,7 +72,13 @@ import {
   type TableRow,
   type TableRowsData
 } from './types'
-import { defaultRowsPerPage, pageSizeOptions } from './constants'
+import {
+  actionsColumnWidth,
+  defaultColumnWidths,
+  defaultRowsPerPage,
+  minAutoColumnWidth,
+  pageSizeOptions
+} from './constants'
 import { artemisPreferencesService } from '../artemis-preferences-service'
 import { ArtemisFilters } from './ArtemisFilters'
 import { RowActions } from './RowActions'
@@ -479,6 +485,13 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
 
   const visibleColumns = columns.filter((column) => column.visible)
 
+  // The table uses fixed layout: column widths come from the header cells only, so the browser doesn't have to
+  // measure the content of every cell when laying out the table. Columns without a width share the rest equally.
+  const columnWidth = (column: TableColumn): string | undefined => column.width ?? defaultColumnWidths[column.type]
+  const fixedWidths = [...visibleColumns.map(columnWidth).filter((w): w is string => w !== undefined), actionsColumnWidth]
+  const autoColumnCount = visibleColumns.length + 1 - fixedWidths.length
+  const tableMinWidth = `calc(${fixedWidths.join(' + ')} + ${autoColumnCount} * ${minAutoColumnWidth})`
+
   // Filters applicable to current tab
   const tabFilters = useMemo(() => {
     return props.filters.searchFilters.filter(f => f.tab === props.initialFilter.tab)
@@ -600,7 +613,8 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
       <Divider />
 
       <InnerScrollContainer>
-        <Table id='data-table' isStickyHeader variant='compact' aria-label='Data Table'>
+        <Table id='data-table' isStickyHeader variant='compact' aria-label='Data Table'
+               className='pf-m-fixed' style={{ minWidth: tableMinWidth }}>
           <Thead>
             <Tr>
               {visibleColumns.map((column, id) => {
@@ -613,6 +627,8 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
                 return (
                   <Th
                     key={id}
+                    modifier='wrap'
+                    style={{ width: columnWidth(column) }}
                     sort={{
                       sortBy: {
                         index: id,
@@ -624,7 +640,7 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
                   >{column.name}</Th>
                 )
               })}
-              <Th aria-label='actions' />
+              <Th aria-label='actions' style={{ width: actionsColumnWidth }} />
             </Tr>
           </Thead>
           <Tbody>
@@ -634,10 +650,10 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
                     {visibleColumns.map((column, id) => {
                       const key = getCellValue(row, column)
                       if (column.filter || column.link) {
-                        return <Td key={id}><Button variant='link' isInline
+                        return <Td key={id} modifier='breakWord'><Button variant='link' isInline
                                                     onClick={handleClick(column, row)}>{key}</Button></Td>
                       } else {
-                        return <Td key={id}>{key}</Td>
+                        return <Td key={id} modifier='breakWord'>{key}</Td>
                       }
                     })}
                     <Td isActionCell>
