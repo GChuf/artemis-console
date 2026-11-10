@@ -613,8 +613,13 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
 
       {/* Size containment: the width of the scroll container comes from the page, not from the table's min-width.
           Otherwise a table wider than the screen widens the whole page (its main grid column can't be narrower than
-          its content), the page scrolls instead of this container and the sticky actions column doesn't stick. */}
-      <InnerScrollContainer style={{ contain: 'inline-size' }}>
+          its content), the page scrolls instead of this container and the sticky actions column doesn't stick.
+          The negative margin cancels the row gap of the enclosing <PageSection>, so the table starts right at the
+          divider above it (otherwise the border of the sticky actions column doesn't reach the divider). */}
+      <InnerScrollContainer style={{
+        contain: 'inline-size',
+        marginBlockStart: 'calc(-1 * var(--pf-v6-c-page__main-section--RowGap, 0px))'
+      }}>
         <Table id='data-table' isStickyHeader variant='compact' aria-label='Data Table'
                className='pf-m-fixed' style={{ minWidth: tableMinWidth, ...evenCompactHeaderPadding }}>
           <Thead>
