@@ -45,7 +45,6 @@ import {
   ToolbarItem
 } from '@patternfly/react-core'
 import {
-  ActionsColumn,
   type IAction,
   InnerScrollContainer,
   Table,
@@ -76,6 +75,7 @@ import {
 import { defaultRowsPerPage, pageSizeOptions } from './constants'
 import { artemisPreferencesService } from '../artemis-preferences-service'
 import { ArtemisFilters } from './ArtemisFilters'
+import { RowActions } from './RowActions'
 import { operationSymbol } from './utils'
 
 /**
@@ -517,12 +517,8 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
     sessionStorage.setItem(props.storageColumnLocation + '.activesort',JSON.stringify(updatedActiveSort))
   }
 
-  const getRowActions = (row: TableRowsData['data'][number]): IAction[] => {
-    if (props.getRowActions) {
-      return props.getRowActions(row)
-    }
-    return []
-  }
+  // the actions of a row are created only when its menu is opened (see <RowActions>)
+  const getRowActions = props.getRowActions
 
   const handleSetPage = (_event: React.MouseEvent | React.KeyboardEvent | MouseEvent, newPage: number) => {
     setPage(newPage)
@@ -633,7 +629,6 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
           </Thead>
           <Tbody>
             {rows.map((row, rowIndex) => {
-              const rowActions = getRowActions(row)
               return (
                   <Tr key={rowIndex}>
                     {visibleColumns.map((column, id) => {
@@ -646,7 +641,7 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
                       }
                     })}
                     <Td isActionCell>
-                      <ActionsColumn items={rowActions} popperProps={{ position: 'end' }} isDisabled={rowActions.length === 0} />
+                      <RowActions getActions={getRowActions && (() => getRowActions(row))} rowIndex={rowIndex} rowData={row} />
                     </Td>
                   </Tr>
               )

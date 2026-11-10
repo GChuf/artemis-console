@@ -44,7 +44,7 @@ import {
   Switch,
   Tooltip
 } from '@patternfly/react-core'
-import { Thead, Tr, Th, Tbody, Td, ActionsColumn, IAction, Table, InnerScrollContainer } from '@patternfly/react-table'
+import { Thead, Tr, Th, Tbody, Td, IAction, Table, InnerScrollContainer } from '@patternfly/react-table'
 import { HelpIcon } from '@patternfly/react-icons/dist/esm/icons/help-icon.js'
 import { ArrowLeftIcon } from '@patternfly/react-icons/dist/esm/icons/arrow-left-icon.js'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router'
@@ -63,6 +63,7 @@ import {
 import { artemisPreferencesService, columnStorage } from '../artemis-preferences-service'
 import { ColumnType, type TableColumn, TableRow } from '../table/types'
 import { closeWithEscape } from '../table/utils'
+import { RowActions } from '../table/RowActions'
 import { createQueueObjectName } from '../util/jmx'
 import { QueueSelectInput } from './QueueSelect'
 import { SendMessage } from './SendMessage'
@@ -752,7 +753,7 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
                 }
                 )}
                 <Td isActionCell>
-                  <ActionsColumn items={getRowActions(row)} popperProps={{ position: 'end' }} />
+                  <RowActions getActions={() => getRowActions(row)} rowIndex={rowIndex} rowData={row} />
                 </Td>
               </Tr>
             ))}
