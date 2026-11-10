@@ -74,14 +74,14 @@ import {
 } from './types'
 import {
   actionsColumnWidth,
-  defaultColumnWidths,
   defaultRowsPerPage,
-  minAutoColumnWidth,
+  evenCompactHeaderPadding,
+  minColumnWidth,
   pageSizeOptions
 } from './constants'
 import { artemisPreferencesService } from '../artemis-preferences-service'
 import { ArtemisFilters } from './ArtemisFilters'
-import { RowActions } from './RowActions'
+import { RowActions, stickyActionsColumn } from './RowActions'
 import { operationSymbol } from './utils'
 
 /**
@@ -487,10 +487,9 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
 
   // The table uses fixed layout: column widths come from the header cells only, so the browser doesn't have to
   // measure the content of every cell when laying out the table. Columns without a width share the rest equally.
-  const columnWidth = (column: TableColumn): string | undefined => column.width ?? defaultColumnWidths[column.type]
-  const fixedWidths = [...visibleColumns.map(columnWidth).filter((w): w is string => w !== undefined), actionsColumnWidth]
-  const autoColumnCount = visibleColumns.length + 1 - fixedWidths.length
-  const tableMinWidth = `calc(${fixedWidths.join(' + ')} + ${autoColumnCount} * ${minAutoColumnWidth})`
+  // The table fills the available width, but its min-width keeps every column at least `minColumnWidth` wide (or its
+  // fixed width). When that doesn't fit the screen, the table scrolls horizontally, with the actions column sticky.
+  const tableMinWidth = `calc(${[...visibleColumns.map(c => c.width ?? minColumnWidth), actionsColumnWidth].join(' + ')})`
 
   // Filters applicable to current tab
   const tabFilters = useMemo(() => {
@@ -612,9 +611,12 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
 
       <Divider />
 
-      <InnerScrollContainer>
+      {/* Size containment: the width of the scroll container comes from the page, not from the table's min-width.
+          Otherwise a table wider than the screen widens the whole page (its main grid column can't be narrower than
+          its content), the page scrolls instead of this container and the sticky actions column doesn't stick. */}
+      <InnerScrollContainer style={{ contain: 'inline-size' }}>
         <Table id='data-table' isStickyHeader variant='compact' aria-label='Data Table'
-               className='pf-m-fixed' style={{ minWidth: tableMinWidth }}>
+               className='pf-m-fixed' style={{ minWidth: tableMinWidth, ...evenCompactHeaderPadding }}>
           <Thead>
             <Tr>
               {visibleColumns.map((column, id) => {
@@ -628,7 +630,7 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
                   <Th
                     key={id}
                     modifier='wrap'
-                    style={{ width: columnWidth(column) }}
+                    style={{ width: column.width }}
                     sort={{
                       sortBy: {
                         index: id,
@@ -640,7 +642,11 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
                   >{column.name}</Th>
                 )
               })}
-              <Th aria-label='actions' style={{ width: actionsColumnWidth }} />
+              {/* same color as the names of the (sortable) columns */}
+              <Th {...stickyActionsColumn}
+                  style={{ ...stickyActionsColumn.style, color: 'var(--pf-v6-c-table__sort--m-selected__button--Color)' }}>
+                Actions
+              </Th>
             </Tr>
           </Thead>
           <Tbody>
@@ -656,7 +662,7 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
                         return <Td key={id} modifier='breakWord'>{key}</Td>
                       }
                     })}
-                    <Td isActionCell>
+                    <Td isActionCell {...stickyActionsColumn}>
                       <RowActions getActions={getRowActions && (() => getRowActions(row))} rowIndex={rowIndex} rowData={row} />
                     </Td>
                   </Tr>

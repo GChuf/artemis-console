@@ -19,6 +19,28 @@ import { Divider, Dropdown, DropdownItem, DropdownList, MenuToggle, Tooltip } fr
 import { type IAction, type IRowData } from '@patternfly/react-table'
 import { RhUiEllipsisVerticalFillIcon } from '@patternfly/react-icons/dist/esm/icons/rh-ui-ellipsis-vertical-fill-icon.js'
 
+import { actionsColumnWidth } from './constants'
+
+/**
+ * Props for the `<Th>` and `<Td>` cells of the column with `<RowActions>`. They keep the column at the right edge of
+ * the table's scroll container, so the actions are reachable without scrolling a wide table horizontally. The left
+ * border marks where the scrolled columns are cut off.
+ */
+export const stickyActionsColumn = {
+  isStickyColumn: true,
+  stickyRightOffset: '0',
+  stickyMinWidth: actionsColumnWidth,
+  hasLeftBorder: true,
+  textCenter: true,
+  style: {
+    width: actionsColumnWidth,
+    // same background as the rest of the table (PatternFly's default for sticky cells differs in some themes)
+    '--pf-v6-c-table__sticky-cell--BackgroundColor': 'var(--pf-v6-c-table--BackgroundColor)',
+    // equal padding on both sides (the last cell of a row has a wider end padding), so the content is centered
+    paddingInline: 'var(--pf-t--global--spacer--sm)'
+  } as React.CSSProperties
+} as const
+
 export type RowActionsProps = {
   /** Returns the actions of the row. Called only once the menu is opened. Without it, the toggle is disabled */
   getActions?: () => IAction[]

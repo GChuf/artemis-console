@@ -18,7 +18,8 @@
 // This module declares some constant values and arrays used in relation to
 // ArtemisTable and related components
 
-import { ColumnType, FilterOperation } from './types'
+import type { CSSProperties } from 'react'
+import { FilterOperation } from './types'
 
 export const operationOptions: { id: FilterOperation, name: string, symbol: string }[] = [
   { id: 'CONTAINS', name: 'Contains', symbol: '~' },
@@ -39,18 +40,19 @@ export const pageSizeOptions: { title: string, value: number }[] = [
 
 export const defaultRowsPerPage = 10
 
-/**
- * Default widths of `<ArtemisTable>` columns by column type, used when a column doesn't declare its own `width`.
- * The table uses fixed layout (column widths don't depend on cell content), so types not listed here share the
- * remaining width equally.
- */
-export const defaultColumnWidths: Partial<Record<ColumnType, string>> = {
-  [ColumnType.NUMBER]: '8rem',
-  [ColumnType.BOOLEAN]: '8rem',
-}
-
 /** Width of the trailing column with the row actions (kebab) menu */
-export const actionsColumnWidth = '5rem'
+export const actionsColumnWidth = '4.5rem'
 
-/** Minimal width of each column without a fixed width; the table scrolls horizontally rather than squeezing them */
-export const minAutoColumnWidth = '10rem'
+/**
+ * Minimal width of a column without a fixed width. When the visible columns can't all get at least this width,
+ * the table scrolls horizontally instead of squeezing them.
+ */
+export const minColumnWidth = '8rem'
+
+/**
+ * Style for compact tables, setting PatternFly's component variable for the top padding of the header cells from
+ * 12px to the same 8px as their bottom padding.
+ */
+export const evenCompactHeaderPadding = {
+  '--pf-v6-c-table--m-compact__th--PaddingBlockStart': 'var(--pf-t--global--spacer--sm)'
+} as CSSProperties

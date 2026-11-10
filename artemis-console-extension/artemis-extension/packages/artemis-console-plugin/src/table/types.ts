@@ -78,8 +78,8 @@ export type TableColumn = {
   /** Column definition may provide a function which returns a custom React component for the value */
   component?: (value: any) => React.ReactNode
   /**
-   * Optional width of the column as a CSS length (e.g. `'8rem'`). The table uses fixed layout, so columns without
-   * a width (explicit or the default for their `type`, see `defaultColumnWidths`) share the remaining space equally.
+   * Optional fixed width of the column as a CSS length (e.g. `'8rem'`). The table uses fixed layout, so columns without
+   * a width share the remaining space equally, each getting at least `minColumnWidth`.
    */
   width?: string
 }

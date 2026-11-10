@@ -63,7 +63,8 @@ import {
 import { artemisPreferencesService, columnStorage } from '../artemis-preferences-service'
 import { ColumnType, type TableColumn, TableRow } from '../table/types'
 import { closeWithEscape } from '../table/utils'
-import { RowActions } from '../table/RowActions'
+import { evenCompactHeaderPadding } from '../table/constants'
+import { RowActions, stickyActionsColumn } from '../table/RowActions'
 import { createQueueObjectName } from '../util/jmx'
 import { QueueSelectInput } from './QueueSelect'
 import { SendMessage } from './SendMessage'
@@ -708,7 +709,7 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
       </Toolbar>
 
       <InnerScrollContainer>
-        <Table id='message-table' isStickyHeader variant='compact' aria-label='Message Table'>
+        <Table id='message-table' isStickyHeader variant='compact' aria-label='Message Table' style={evenCompactHeaderPadding}>
           <Thead>
             <Tr>
               <Th
@@ -725,7 +726,7 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
                   return null
                 }
               })}
-              <Th aria-label='actions' />
+              <Th {...stickyActionsColumn}>Actions</Th>
             </Tr>
           </Thead>
           <Tbody>
@@ -752,7 +753,7 @@ export const MessagesTable: React.FunctionComponent<MessageTableProps> = props =
                   }
                 }
                 )}
-                <Td isActionCell>
+                <Td isActionCell {...stickyActionsColumn}>
                   <RowActions getActions={() => getRowActions(row)} rowIndex={rowIndex} rowData={row} />
                 </Td>
               </Tr>
