@@ -56,3 +56,12 @@ export const minColumnWidth = '8rem'
 export const evenCompactHeaderPadding = {
   '--pf-v6-c-table--m-compact__th--PaddingBlockStart': 'var(--pf-t--global--spacer--sm)'
 } as CSSProperties
+
+/**
+ * Style for compact tables with sortable columns, setting the top padding of the header cells to 0. The sort button
+ * inside a header cell has its own 8px top padding (its bottom padding is cancelled by a negative margin), so the
+ * column names get the same 8px above as below.
+ */
+export const sortableCompactHeaderPadding = {
+  '--pf-v6-c-table--m-compact__th--PaddingBlockStart': '0'
+} as CSSProperties

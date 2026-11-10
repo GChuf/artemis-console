@@ -75,9 +75,9 @@ import {
 import {
   actionsColumnWidth,
   defaultRowsPerPage,
-  evenCompactHeaderPadding,
   minColumnWidth,
-  pageSizeOptions
+  pageSizeOptions,
+  sortableCompactHeaderPadding
 } from './constants'
 import { artemisPreferencesService } from '../artemis-preferences-service'
 import { ArtemisFilters } from './ArtemisFilters'
@@ -621,7 +621,7 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
         marginBlockStart: 'calc(-1 * var(--pf-v6-c-page__main-section--RowGap, 0px))'
       }}>
         <Table id='data-table' isStickyHeader variant='compact' aria-label='Data Table'
-               className='pf-m-fixed' style={{ minWidth: tableMinWidth, ...evenCompactHeaderPadding }}>
+               className='pf-m-fixed' style={{ minWidth: tableMinWidth, ...sortableCompactHeaderPadding }}>
           <Thead>
             <Tr>
               {visibleColumns.map((column, id) => {
