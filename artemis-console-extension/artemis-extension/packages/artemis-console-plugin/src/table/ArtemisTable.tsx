@@ -446,6 +446,9 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
   const [rows, setRows] = useState<TableRowsData['data']>([])
   const [resultsSize, setResultsSize] = useState<TableRowsData['count']>(0)
 
+  const [loading, setLoading] = useState<boolean>(true)
+  const [updateKey, setUpdateKey] = useState<string | null>(null)
+
   // -- state initialized by component props
   //    mind that the value (or init-function) is used in React state only on initial mount or re-mount (when key changes),
   //    but NOT when the component is updated (re-rendered)
@@ -469,20 +472,31 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
 
   const displayFilter = tabFilters.length > 0 ? tabFilters[tabFilters.length - 1] : props.initialFilter
 
+  const currentUpdateKey = JSON.stringify({
+    page, perPage, activeSort, tabFilters, count: props.refreshCount
+  })
+  const isLoading = loading || currentUpdateKey !== updateKey
+
   // main data loading effect for lazy population of the table
   useEffect(() => {
     let apply = true
+    setLoading(true)
+
     props.getData(page, perPage, activeSort, tabFilters)
         .then(rowsData => {
           if (apply) {
+            setLoading(false)
             setRows(rowsData.data)
             setResultsSize(rowsData.count)
+            setUpdateKey(currentUpdateKey)
           }
         })
         .catch(error => {
           if (apply) {
+            setLoading(false)
             setRows([])
             setResultsSize(0)
+            setUpdateKey(currentUpdateKey)
             eventService.notify({ type: 'danger', message: 'Problem populating data: ' + jolokiaService.errorMessage(error) })
           }
         })
@@ -586,7 +600,7 @@ export const ArtemisTable: React.FunctionComponent<ArtemisTableProps> = props =>
 
       <Divider />
 
-      <InnerScrollContainer>
+      <InnerScrollContainer style={{ opacity: isLoading ? 0.4 : 1, transition: 'opacity 0.25s' }}>
         <Table id='data-table' isStickyHeader variant='compact' aria-label='Data Table'>
           <Thead>
             <Tr>
