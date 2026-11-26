@@ -263,12 +263,18 @@ const jolokiaAttributes = [
 class ArtemisService {
 
     private brokerObjectName: Promise<string>
+    private brokerState: Promise<BrokerState>
+    private mBeanInfo: Promise<MBeanNode | null>
+    private listAsData?: Promise<boolean>
 
     private brokerStatus: BrokerStatus
     private statusListeners: ((st: BrokerStatus) => void)[]
 
     constructor() {
         this.brokerObjectName = Promise.resolve("")
+        this.brokerState = Promise.resolve({ loaded: false, accessible: false });
+        this.mBeanInfo = Promise.resolve(null)
+        this.listAsData = undefined;
         this.brokerStatus = BrokerStatus.UNINITIALIZED
         this.statusListeners = []
     }
@@ -279,6 +285,8 @@ class ArtemisService {
      */
     initialize() {
         this.brokerObjectName = this.initBrokerObjectName();
+        this.brokerState = this.getBrokerState();
+        this.mBeanInfo = this.brokerObjectName.then(name => findMBeanInfo(name).catch(() => null));
     }
 
     private async initBrokerObjectName(): Promise<string> {
@@ -300,14 +308,14 @@ class ArtemisService {
         return null;
     }
 
-    async getBrokerInfo(): Promise<BrokerState> {
+    async getBrokerState(): Promise<BrokerState> {
         return new Promise<BrokerState>(async (resolve, _reject) => {
             const brokerObjectName = await this.brokerObjectName;
             if ("" === brokerObjectName) {
                 resolve({ loaded: true, accessible: false, message: "No Broker ObjectName available" })
                 return
             }
-            const brokerMBean = await findMBeanInfo(brokerObjectName)
+            const brokerMBean = await this.mBeanInfo;
             if (!brokerMBean) {
                 resolve({ loaded: true, accessible: false, message: `No Broker MBean available for name ${brokerObjectName}` })
                 return
@@ -391,7 +399,7 @@ class ArtemisService {
     async createBrokerTopology(maxAddresses: number, addressFilter: string): Promise<BrokerTopology | null> {
         return new Promise<BrokerTopology | null>(async (resolve, reject) => {
             try {
-                const state = await this.getBrokerInfo();
+                const state = await this.brokerState;
                 if (!state || !state.info) {
                     resolve(null)
                 }
@@ -435,7 +443,7 @@ class ArtemisService {
                 lockCoordinators: []
             };
             const brokerObjectName = await this.getBrokerObjectName();
-            const brokerMBean = await findMBeanInfo(brokerObjectName);
+            const brokerMBean = await this.mBeanInfo;
             const doesListLockCoordinatorMethodExist = this.doesListLockCoordinatorMethodExist(brokerMBean as MBeanNode)
             if (!doesListLockCoordinatorMethodExist) {
                 console.log("Lock Coordinators not available in this broker version");
@@ -696,14 +704,33 @@ class ArtemisService {
         return this.list(LIST_QUEUES_SIG, LIST_QUEUES_DATA_SIG, [JSON.stringify(queuesFilter), 1, 1000]);
     }
 
+    private useDataOperations(): Promise<boolean> {
+        if (!this.listAsData) {
+            this.listAsData = this.brokerObjectName
+                .then(name => findMBeanInfo(name))
+                .then(broker => {
+                    if (!broker) {
+                        this.listAsData = undefined   // not found (yet): try again next time
+                        return false
+                    }
+                    return this.canListAsData(broker)
+                })
+                .catch(() => {
+                    this.listAsData = undefined
+                    return false
+                })
+        }
+        return this.listAsData
+    }
+
     /**
      * Executes one of the paged list operations of the broker MBean. Brokers which provide the `...AsData` variant of
      * the operation return the result as structured data, older brokers return it as a JSON string.
      */
     private async list(signature: string, dataSignature: string, args: unknown[]): Promise<TableRowsData> {
-        const brokerObjectName = await this.getBrokerObjectName();
-        const brokerMBean = await findMBeanInfo(brokerObjectName).catch(() => null);
-        const result = await jolokiaService.execute(brokerObjectName, this.listSignature(brokerMBean ?? undefined, signature, dataSignature), args, this.readOptions());
+        const brokerObjectName = await this.brokerObjectName;
+        const listSignature = await this.useDataOperations() ? dataSignature : signature;
+        const result = await jolokiaService.execute(brokerObjectName, listSignature, args, this.readOptions());
         return typeof result === "string" ? JSON.parse(result) : result as TableRowsData;
     }
 
@@ -714,13 +741,6 @@ class ArtemisService {
      */
     private readOptions() {
         return { includeRequest: false };
-    }
-
-    /**
-     * Returns `dataSignature` if the broker provides that operation, otherwise `signature`.
-     */
-    listSignature = (broker: MBeanNode | undefined, signature: string, dataSignature: string): string => {
-        return broker?.hasOperations?.(dataSignature.substring(0, dataSignature.indexOf("("))) ? dataSignature : signature;
     }
 
     async deleteQueue(name: string) {
@@ -968,28 +988,9 @@ class ArtemisService {
         return broker?broker.hasOperations("listLockCoordinatorsAsJSON"): false;
     }
 
-    canListConnections = (broker: MBeanNode | undefined): boolean => {
-        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(this.listSignature(broker, LIST_CONNECTIONS_SIG, LIST_CONNECTIONS_DATA_SIG))) ?? false
-    }
-
-    canListSessions = (broker: MBeanNode | undefined): boolean => {
-        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(this.listSignature(broker, LIST_SESSIONS_SIG, LIST_SESSIONS_DATA_SIG))) ?? false
-    }
-
-    canListConsumers = (broker: MBeanNode | undefined): boolean => {
-        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(this.listSignature(broker, LIST_CONSUMERS_SIG, LIST_CONSUMERS_DATA_SIG))) ?? false
-    }
-
-    canListProducers = (broker: MBeanNode | undefined): boolean => {
-        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(this.listSignature(broker, LIST_PRODUCERS_SIG, LIST_PRODUCERS_DATA_SIG))) ?? false
-    }
-
-    canListAddresses = (broker: MBeanNode | undefined): boolean => {
-        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(this.listSignature(broker, LIST_ADDRESSES_SIG, LIST_ADDRESSES_DATA_SIG))) ?? false
-    }
-
-    canListQueues = (broker: MBeanNode | undefined): boolean => {
-        return (this.DEBUG_PRIVS && broker?.hasInvokeRights(this.listSignature(broker, LIST_QUEUES_SIG, LIST_QUEUES_DATA_SIG))) ?? false
+    canListAsData = (broker: MBeanNode | undefined): boolean => {
+        //check for listQueuesAsData operation - if it exists, all other *AsData operations exist as well
+        return (broker?.hasOperations("listQueuesAsData")) ?? false
     }
 
     canListNetworkTopology = (broker: MBeanNode | undefined): boolean => {
