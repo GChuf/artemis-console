@@ -86,7 +86,7 @@ describe('Status', () => {
     jest.useFakeTimers()
 
     ;(jolokiaService.loadUpdateRate as jest.Mock).mockReturnValue(5000)
-    ;(artemisService.getBrokerInfo as jest.Mock).mockResolvedValue({
+    ;(artemisService.getBrokerState as jest.Mock).mockResolvedValue({
       info: mockBrokerInfo,
       ...mockBrokerState
     })
@@ -105,19 +105,19 @@ describe('Status', () => {
     renderWithContext()
 
     await waitFor(() => {
-      expect(artemisService.getBrokerInfo).toHaveBeenCalledTimes(1)
+      expect(artemisService.getBrokerState).toHaveBeenCalledTimes(1)
     })
 
     jest.advanceTimersByTime(5000)
 
     await waitFor(() => {
-      expect(artemisService.getBrokerInfo).toHaveBeenCalledTimes(2)
+      expect(artemisService.getBrokerState).toHaveBeenCalledTimes(2)
     })
 
     jest.advanceTimersByTime(5000)
 
     await waitFor(() => {
-      expect(artemisService.getBrokerInfo).toHaveBeenCalledTimes(3)
+      expect(artemisService.getBrokerState).toHaveBeenCalledTimes(3)
     })
   })
 
@@ -125,7 +125,7 @@ describe('Status', () => {
     renderWithContext()
 
     await waitFor(() => {
-      expect(artemisService.getBrokerInfo).toHaveBeenCalledTimes(1)
+      expect(artemisService.getBrokerState).toHaveBeenCalledTimes(1)
     })
 
     await waitFor(() => {
@@ -135,7 +135,7 @@ describe('Status', () => {
     jest.advanceTimersByTime(5000)
 
     await waitFor(() => {
-      expect(artemisService.getBrokerInfo).toHaveBeenCalledTimes(2)
+      expect(artemisService.getBrokerState).toHaveBeenCalledTimes(2)
     })
 
     const brokerInfoCard = screen.getByText('Broker Info').closest('.pf-v6-c-card') as HTMLElement
@@ -149,14 +149,14 @@ describe('Status', () => {
       expect(screen.getByLabelText('operations-modal')).toBeInTheDocument()
     })
 
-    const callCountBeforePause = (artemisService.getBrokerInfo as jest.Mock).mock.calls.length
+    const callCountBeforePause = (artemisService.getBrokerState as jest.Mock).mock.calls.length
 
     jest.advanceTimersByTime(5000)
     jest.advanceTimersByTime(5000)
     jest.advanceTimersByTime(5000)
 
     await waitFor(() => {
-      expect(artemisService.getBrokerInfo).toHaveBeenCalledTimes(callCountBeforePause)
+      expect(artemisService.getBrokerState).toHaveBeenCalledTimes(callCountBeforePause)
     })
   })
 
@@ -164,7 +164,7 @@ describe('Status', () => {
     renderWithContext()
 
     await waitFor(() => {
-      expect(artemisService.getBrokerInfo).toHaveBeenCalledTimes(1)
+      expect(artemisService.getBrokerState).toHaveBeenCalledTimes(1)
     })
 
     await waitFor(() => {
@@ -182,12 +182,12 @@ describe('Status', () => {
       expect(screen.getByLabelText('operations-modal')).toBeInTheDocument()
     })
 
-    const callCountWhenDialogOpened = (artemisService.getBrokerInfo as jest.Mock).mock.calls.length
+    const callCountWhenDialogOpened = (artemisService.getBrokerState as jest.Mock).mock.calls.length
 
     jest.advanceTimersByTime(10000)
 
     await waitFor(() => {
-      expect(artemisService.getBrokerInfo).toHaveBeenCalledTimes(callCountWhenDialogOpened)
+      expect(artemisService.getBrokerState).toHaveBeenCalledTimes(callCountWhenDialogOpened)
     })
 
     const closeButtons = screen.getAllByRole('button', { name: 'Close' })
@@ -198,12 +198,12 @@ describe('Status', () => {
       expect(screen.queryByLabelText('operations-modal')).not.toBeInTheDocument()
     })
 
-    const callCountAfterClose = (artemisService.getBrokerInfo as jest.Mock).mock.calls.length
+    const callCountAfterClose = (artemisService.getBrokerState as jest.Mock).mock.calls.length
 
     jest.advanceTimersByTime(5000)
 
     await waitFor(() => {
-      expect(artemisService.getBrokerInfo).toHaveBeenCalledTimes(callCountAfterClose + 1)
+      expect(artemisService.getBrokerState).toHaveBeenCalledTimes(callCountAfterClose + 1)
     })
   })
 
@@ -211,7 +211,7 @@ describe('Status', () => {
     renderWithContext()
 
     await waitFor(() => {
-      expect(artemisService.getBrokerInfo).toHaveBeenCalledTimes(1)
+      expect(artemisService.getBrokerState).toHaveBeenCalledTimes(1)
     })
 
     await waitFor(() => {
@@ -231,12 +231,12 @@ describe('Status', () => {
       expect(screen.getByLabelText('attributes-modal')).toBeInTheDocument()
     })
 
-    const callCountBeforeInterval = (artemisService.getBrokerInfo as jest.Mock).mock.calls.length
+    const callCountBeforeInterval = (artemisService.getBrokerState as jest.Mock).mock.calls.length
 
     jest.advanceTimersByTime(5000)
 
     await waitFor(() => {
-      expect(artemisService.getBrokerInfo).toHaveBeenCalledTimes(callCountBeforeInterval + 1)
+      expect(artemisService.getBrokerState).toHaveBeenCalledTimes(callCountBeforeInterval + 1)
     })
   })
 
@@ -244,21 +244,21 @@ describe('Status', () => {
     const { unmount } = render(<Status />)
 
     await waitFor(() => {
-      expect(artemisService.getBrokerInfo).toHaveBeenCalledTimes(1)
+      expect(artemisService.getBrokerState).toHaveBeenCalledTimes(1)
     })
 
     jest.advanceTimersByTime(5000)
 
     await waitFor(() => {
-      expect(artemisService.getBrokerInfo).toHaveBeenCalledTimes(2)
+      expect(artemisService.getBrokerState).toHaveBeenCalledTimes(2)
     })
 
-    const callCountBeforeUnmount = (artemisService.getBrokerInfo as jest.Mock).mock.calls.length
+    const callCountBeforeUnmount = (artemisService.getBrokerState as jest.Mock).mock.calls.length
 
     unmount()
 
     jest.advanceTimersByTime(10000)
 
-    expect(artemisService.getBrokerInfo).toHaveBeenCalledTimes(callCountBeforeUnmount)
+    expect(artemisService.getBrokerState).toHaveBeenCalledTimes(callCountBeforeUnmount)
   })
 })

@@ -81,7 +81,7 @@ export const Status: React.FunctionComponent = () => {
   const { findAndSelectNode } = useContext(ArtemisContext)
 
   const getBrokerInfo = async () => {
-    artemisService.getBrokerInfo()
+    artemisService.getBrokerState()
         .then((brokerInfo) => {
           if (brokerInfo.info) {
             setBrokerInfo(brokerInfo.info)
